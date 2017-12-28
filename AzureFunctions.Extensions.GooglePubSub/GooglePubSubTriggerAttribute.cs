@@ -12,36 +12,25 @@ namespace AzureFunctions.Extensions.GooglePubSub {
         private readonly string subscriptionId;
         private readonly string credentialsFileName;
 
-        public GooglePubSubTriggerAttribute(string projectId, string topicId, string subscriptionId, string credentialsFileName) {
-            if (string.IsNullOrWhiteSpace(projectId)) {
-                throw new ArgumentException("message", nameof(projectId));
-            }
-
-            if (string.IsNullOrWhiteSpace(topicId)) {
-                throw new ArgumentException("message", nameof(topicId));
-            }
-
-            if (string.IsNullOrWhiteSpace(subscriptionId)) {
-                throw new ArgumentException("message", nameof(subscriptionId));
-            }
-
-            if (string.IsNullOrWhiteSpace(credentialsFileName)) {
-                throw new ArgumentException("message", nameof(credentialsFileName));
-            }
+        public GooglePubSubTriggerAttribute(string credentialsFileName, string projectId, string topicId, string subscriptionId) {
+            if (string.IsNullOrWhiteSpace(projectId)) { throw new ArgumentNullException(nameof(projectId)); }
+            if (string.IsNullOrWhiteSpace(topicId)) { throw new ArgumentNullException(nameof(topicId)); }
+            if (string.IsNullOrWhiteSpace(subscriptionId)) { throw new ArgumentNullException(nameof(subscriptionId)); }
+            if (string.IsNullOrWhiteSpace(credentialsFileName)) { throw new ArgumentNullException(nameof(credentialsFileName)); }
 
             this.projectId = projectId;
             this.topicId = topicId;
             this.subscriptionId = subscriptionId;
             this.credentialsFileName = credentialsFileName;
         }
-        
+
         public string ProjectId => projectId;
         public string TopicId => topicId;
         public string SubscriptionId => subscriptionId;
         public string CredentialsFileName => credentialsFileName;
 
         public bool CreateSubscriptionIfDoesntExist { get; set; } = true;
-        
+
         public int MaxBatchSize { get; set; } = 100;
 
     }

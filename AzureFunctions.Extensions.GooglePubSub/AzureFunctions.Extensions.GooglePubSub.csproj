@@ -2,14 +2,15 @@
 
   <PropertyGroup>
     <TargetFramework>netstandard2.0</TargetFramework>
-    <Version>0.0.9.3</Version>
+    <Version>0.0.9.4</Version>
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
-    <AssemblyVersion>0.0.9.3</AssemblyVersion>
-    <FileVersion>0.0.9.3</FileVersion>
+    <AssemblyVersion>0.0.9.4</AssemblyVersion>
+    <FileVersion>0.0.9.4</FileVersion>
     <Authors>Damiao Castro</Authors>
     <Company>fowet.com</Company>
     <Product>AzureFunctions.Extensions.GooglePubSub</Product>
-    <Description>Extension for Google PubSub to work with Azure Functions and Azure Webjobs</Description>
+    <Description>Extension for Google PubSub to work with Azure Functions and Azure Webjobs.
+If this package was done by Microsoft itself would be under the namespace "Microsoft.Azure.WebJobs.Extensions.GooglePubSub"</Description>
     <PackageProjectUrl>https://github.com/DamiaoCastro/AzureFunctionsExtensionGooglePubSub/wiki</PackageProjectUrl>
   </PropertyGroup>
 

@@ -3,7 +3,7 @@ using System;
 
 namespace AzureFunctions.Extensions.GooglePubSub {
 
-    internal static class GooglePubJobHostConfigurationExtensions {
+    public static class GooglePubJobHostConfigurationExtensions {
 
         /// <summary>
         /// Enables use of the Google PubSub extensions for webjobs

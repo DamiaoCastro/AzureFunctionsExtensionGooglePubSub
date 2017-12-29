@@ -13,10 +13,10 @@ namespace AzureFunctions.Extensions.GooglePubSub {
         private readonly string credentialsFileName;
 
         public GooglePubSubTriggerAttribute(string credentialsFileName, string projectId, string topicId, string subscriptionId) {
+            if (string.IsNullOrWhiteSpace(credentialsFileName)) { throw new ArgumentNullException(nameof(credentialsFileName)); }
             if (string.IsNullOrWhiteSpace(projectId)) { throw new ArgumentNullException(nameof(projectId)); }
             if (string.IsNullOrWhiteSpace(topicId)) { throw new ArgumentNullException(nameof(topicId)); }
             if (string.IsNullOrWhiteSpace(subscriptionId)) { throw new ArgumentNullException(nameof(subscriptionId)); }
-            if (string.IsNullOrWhiteSpace(credentialsFileName)) { throw new ArgumentNullException(nameof(credentialsFileName)); }
 
             this.projectId = projectId;
             this.topicId = topicId;
@@ -28,9 +28,7 @@ namespace AzureFunctions.Extensions.GooglePubSub {
         public string TopicId => topicId;
         public string SubscriptionId => subscriptionId;
         public string CredentialsFileName => credentialsFileName;
-
         public bool CreateSubscriptionIfDoesntExist { get; set; } = true;
-
         public int MaxBatchSize { get; set; } = 100;
 
     }

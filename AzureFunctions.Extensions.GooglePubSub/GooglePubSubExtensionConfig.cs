@@ -12,9 +12,9 @@ namespace AzureFunctions.Extensions.GooglePubSub {
             }
             context.Config.RegisterBindingExtensions(new TriggerBindingProvider());
             
-            //context.AddBindingRule<GooglePubSubTriggerAttribute>()
-            //    .BindToTrigger(new TriggerAttributeBindingProvider());
-            
+            context.AddBindingRule<GooglePubSubAttribute>()
+                .BindToCollector(c => new AsyncCollector(c));
+
         }
     }
 }

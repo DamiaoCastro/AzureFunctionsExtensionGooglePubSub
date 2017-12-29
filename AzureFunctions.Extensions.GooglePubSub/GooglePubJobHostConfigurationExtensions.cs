@@ -6,7 +6,7 @@ namespace AzureFunctions.Extensions.GooglePubSub {
     internal static class GooglePubJobHostConfigurationExtensions {
 
         /// <summary>
-        /// Enables use of the Google PubSub extensions
+        /// Enables use of the Google PubSub extensions for webjobs
         /// </summary>
         /// <param name="config">The <see cref="JobHostConfiguration"/> to configure.</param>
         public static void UseGooglePubSub(this JobHostConfiguration config) {

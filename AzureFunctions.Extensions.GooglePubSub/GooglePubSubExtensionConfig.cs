@@ -10,11 +10,12 @@ namespace AzureFunctions.Extensions.GooglePubSub {
             if (context == null) {
                 throw new ArgumentNullException(nameof(context));
             }
-            context.Config.RegisterBindingExtensions(new TriggerBindingProvider());
-            
+
             context.AddBindingRule<GooglePubSubAttribute>()
                 .BindToCollector(c => new AsyncCollector(c));
-
+            
+            context.Config.RegisterBindingExtensions(new TriggerBindingProvider());
+            
         }
     }
 }

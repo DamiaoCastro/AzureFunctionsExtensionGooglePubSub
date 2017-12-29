@@ -4,7 +4,7 @@ using System;
 namespace AzureFunctions.Extensions.GooglePubSub {
 
     [Binding]
-    [AttributeUsage(/*AttributeTargets.ReturnValue |*/ AttributeTargets.Parameter)]
+    [AttributeUsage(AttributeTargets.Parameter)]
     public class GooglePubSubAttribute : Attribute {
         public GooglePubSubAttribute(string credentialsFileName, string projectId, string topicId) {
             if (string.IsNullOrWhiteSpace(credentialsFileName)) { throw new ArgumentNullException(nameof(credentialsFileName)); }

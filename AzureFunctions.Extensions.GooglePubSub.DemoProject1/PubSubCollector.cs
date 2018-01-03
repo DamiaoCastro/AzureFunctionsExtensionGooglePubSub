@@ -5,10 +5,8 @@ namespace AzureFunctions.Extensions.GooglePubSub.DemoProject1 {
 
         [FunctionName("PubSubCollector")]
         public static void Run(
-            [TimerTrigger("0 */1 * * * *")]TimerInfo myTimer,
-            //[GooglePubSub("credencials.json","projectId", "topicId")]
-            [GooglePubSub("damiao-1982", "test1")]
-                ICollector<string> messages
+            [TimerTrigger("0 */1 * * * *", RunOnStartup = true)]TimerInfo myTimer,
+            [GooglePubSub("credencials.json", "projectId", "topicId")] ICollector<string> messages
             ) {
 
             messages.Add("I have a new message");

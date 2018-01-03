@@ -13,25 +13,16 @@ namespace AzureFunctions.Extensions.GooglePubSub {
         /// <param name="credentialsFileName">
         /// the file "credencials.json" should be the Service Account file downloaded from the Google Cloud Platform website and located in the base executable folder of the functions project. 
         /// ( just add the file to your project and mark it to "copy always" )
-        /// If you leave it null, the default credentials should be configured at machine level
+        /// If you leave it empty -> "", the default credentials should be configured at machine level.
+        /// IMPORTANT: If you make it null, the function fail to run.
         /// </param>
         /// <param name="projectId">projectId inside google cloud</param>
         /// <param name="topicId">PubSub topicId to write to</param>
         public GooglePubSubAttribute(string credentialsFileName, string projectId, string topicId) {
-            //if (string.IsNullOrWhiteSpace(credentialsFileName)) { throw new ArgumentNullException(nameof(credentialsFileName)); }
             if (string.IsNullOrWhiteSpace(projectId)) { throw new ArgumentNullException(nameof(projectId)); }
             if (string.IsNullOrWhiteSpace(topicId)) { throw new ArgumentNullException(nameof(topicId)); }
 
-            CredentialsFileName = credentialsFileName;
-            ProjectId = projectId;
-            TopicId = topicId;
-        }
-
-        public GooglePubSubAttribute(string projectId, string topicId) {
-            if (string.IsNullOrWhiteSpace(projectId)) { throw new ArgumentNullException(nameof(projectId)); }
-            if (string.IsNullOrWhiteSpace(topicId)) { throw new ArgumentNullException(nameof(topicId)); }
-
-            CredentialsFileName = string.Empty;
+            CredentialsFileName = credentialsFileName ?? throw new ArgumentNullException(nameof(credentialsFileName));
             ProjectId = projectId;
             TopicId = topicId;
         }

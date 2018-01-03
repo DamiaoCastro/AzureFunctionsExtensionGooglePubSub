@@ -1,5 +1,6 @@
 ﻿using Google.Cloud.PubSub.V1;
 using Grpc.Auth;
+using Grpc.Core;
 using Microsoft.Azure.WebJobs;
 using System.Collections.Generic;
 using System.Linq;
@@ -16,7 +17,7 @@ namespace AzureFunctions.Extensions.GooglePubSub {
         public AsyncCollector(GooglePubSubAttribute googlePubSubAttribute) {
             this.googlePubSubAttribute = googlePubSubAttribute;
         }
-        
+
         void ICollector<string>.Add(string item) {
             items.Add(item);
         }
@@ -29,15 +30,7 @@ namespace AzureFunctions.Extensions.GooglePubSub {
         Task IAsyncCollector<string>.FlushAsync(CancellationToken cancellationToken) {
 
             if (items.Any()) {
-                //credentials
-                var path = System.IO.Path.GetDirectoryName(typeof(TriggerBindingProvider).Assembly.Location);
-                var fullPath = System.IO.Path.Combine(path, "..", googlePubSubAttribute.CredentialsFileName);
-                var credentials = System.IO.File.ReadAllBytes(fullPath);
-                var googleCredential = Google.Apis.Auth.OAuth2.GoogleCredential.FromStream(new System.IO.MemoryStream(credentials)).CreateScoped(SubscriberClient.DefaultScopes);
-                var channelCredentials = googleCredential.ToChannelCredentials();
-                Grpc.Core.Channel channel = new Grpc.Core.Channel(SubscriberClient.DefaultEndpoint.Host, SubscriberClient.DefaultEndpoint.Port, channelCredentials);
-
-                PublisherClient publisher = PublisherClient.Create(channel);
+                PublisherClient publisher = CreatorService.GetPublisherClient(googlePubSubAttribute.CredentialsFileName);
 
                 var topicName = new TopicName(googlePubSubAttribute.ProjectId, googlePubSubAttribute.TopicId);
                 var pubSubMessages = items.Select(c => new PubsubMessage() { Data = Google.Protobuf.ByteString.CopyFromUtf8(c) });
@@ -46,6 +39,6 @@ namespace AzureFunctions.Extensions.GooglePubSub {
 
             return Task.WhenAll();
         }
-        
+
     }
 }

@@ -21,14 +21,13 @@ namespace AzureFunctions.Extensions.GooglePubSub {
             
             // TODO: Define the types your binding supports here
             if (parameter.ParameterType != typeof(IEnumerable<string>) &&
-                parameter.ParameterType != typeof(string[]) &&
-                parameter.ParameterType != typeof(string)) {
+                parameter.ParameterType != typeof(string[])) {
 
                 throw new InvalidOperationException($"Can't bind {nameof(GooglePubSubTriggerAttribute)} to type '{parameter.ParameterType}'.");
 
             }
             
-            return Task.FromResult<ITriggerBinding>(new TriggerBinding(context.Parameter));
+            return Task.FromResult<ITriggerBinding>(new TriggerBinding(attribute, context.Parameter));
 
         }
 

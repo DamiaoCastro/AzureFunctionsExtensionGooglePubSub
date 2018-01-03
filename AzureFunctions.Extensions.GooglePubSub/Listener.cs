@@ -27,15 +27,7 @@ namespace AzureFunctions.Extensions.GooglePubSub {
 
         public async Task StartAsync(CancellationToken cancellationToken) {
             
-            //credentials
-            var path = System.IO.Path.GetDirectoryName(typeof(TriggerBindingProvider).Assembly.Location);
-            var fullPath = System.IO.Path.Combine(path, "..", triggerAttribute.CredentialsFileName);
-            var credentials = System.IO.File.ReadAllBytes(fullPath);
-            var googleCredential = Google.Apis.Auth.OAuth2.GoogleCredential.FromStream(new System.IO.MemoryStream(credentials)).CreateScoped(SubscriberClient.DefaultScopes);
-            var channelCredentials = googleCredential.ToChannelCredentials();
-            Grpc.Core.Channel channel = new Grpc.Core.Channel(SubscriberClient.DefaultEndpoint.Host, SubscriberClient.DefaultEndpoint.Port, channelCredentials);
-
-            SubscriberClient subscriber = SubscriberClient.Create(channel);
+            SubscriberClient subscriber = CreatorService.GetSubscriberClient(triggerAttribute.CredentialsFileName);
 
             string projectId = triggerAttribute.ProjectId;
             string topicId = triggerAttribute.TopicId;
@@ -70,7 +62,7 @@ namespace AzureFunctions.Extensions.GooglePubSub {
                         TriggerValue = messages
                     };
 
-                    await executor.TryExecuteAsync(input, CancellationToken.None)
+                    await executor.TryExecuteAsync(input, cancellationToken)
                         .ContinueWith(async (functionResultTask) => {
 
                             FunctionResult functionResult = functionResultTask.Result;

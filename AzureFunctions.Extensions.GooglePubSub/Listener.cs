@@ -6,7 +6,6 @@ using Google.Cloud.PubSub.V1;
 using System;
 using System.Linq;
 using System.Collections.Generic;
-using Grpc.Auth;
 
 namespace AzureFunctions.Extensions.GooglePubSub {
     internal class Listener : IListener {
@@ -15,8 +14,8 @@ namespace AzureFunctions.Extensions.GooglePubSub {
         private readonly GooglePubSubTriggerAttribute triggerAttribute;
 
         public Listener(ITriggeredFunctionExecutor executor, GooglePubSubTriggerAttribute triggerAttribute) {
-            this.executor = executor ?? throw new ArgumentNullException(nameof(executor));
-            this.triggerAttribute = triggerAttribute ?? throw new ArgumentNullException(nameof(triggerAttribute));
+            this.executor = executor;
+            this.triggerAttribute = GooglePubSubTriggerAttribute.GetAttributeByConfiguration(triggerAttribute);
         }
 
         public void Cancel() {
@@ -26,8 +25,8 @@ namespace AzureFunctions.Extensions.GooglePubSub {
         }
 
         public async Task StartAsync(CancellationToken cancellationToken) {
-            
-            SubscriberClient subscriber = CreatorService.GetSubscriberClient(triggerAttribute.CredentialsFileName);
+
+            SubscriberClient subscriber = CreatorService.GetSubscriberClient(triggerAttribute);
 
             string projectId = triggerAttribute.ProjectId;
             string topicId = triggerAttribute.TopicId;

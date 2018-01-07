@@ -27,8 +27,44 @@ namespace AzureFunctions.Extensions.GooglePubSub {
             TopicId = topicId;
         }
 
+        internal GooglePubSubAttribute(byte[] credentials, string projectId, string topicId) {
+            if (string.IsNullOrWhiteSpace(projectId)) { throw new ArgumentNullException(nameof(projectId)); }
+            if (string.IsNullOrWhiteSpace(topicId)) { throw new ArgumentNullException(nameof(topicId)); }
+
+            Credentials = credentials;
+            ProjectId = projectId;
+            TopicId = topicId;
+        }
+
+        public GooglePubSubAttribute(string configurationNodeName) {
+            if (string.IsNullOrWhiteSpace(configurationNodeName)) { throw new ArgumentNullException(nameof(configurationNodeName)); }
+
+            ConfigurationNodeName = configurationNodeName;
+        }
+
         public string CredentialsFileName { get; }
+        internal byte[] Credentials { get; }
+
         public string ProjectId { get; }
         public string TopicId { get; }
+        public string ConfigurationNodeName { get; }
+
+        internal static GooglePubSubAttribute GetAttributeByConfiguration(GooglePubSubAttribute googlePubSubAttribute) {
+            if (string.IsNullOrWhiteSpace(googlePubSubAttribute.ConfigurationNodeName)) { return googlePubSubAttribute; }
+
+            var credentialsString = System.Environment.GetEnvironmentVariable($"{googlePubSubAttribute.ConfigurationNodeName}.Credentials", System.EnvironmentVariableTarget.Process);
+            var credentialsFileName = System.Environment.GetEnvironmentVariable($"{googlePubSubAttribute.ConfigurationNodeName}.CredentialsFileName", System.EnvironmentVariableTarget.Process);
+            var projectId = System.Environment.GetEnvironmentVariable($"{googlePubSubAttribute.ConfigurationNodeName}.ProjectId", System.EnvironmentVariableTarget.Process);
+            var topicId = System.Environment.GetEnvironmentVariable($"{googlePubSubAttribute.ConfigurationNodeName}.TopicId", System.EnvironmentVariableTarget.Process);
+            
+            if (string.IsNullOrWhiteSpace(credentialsString)) {
+                return new GooglePubSubAttribute(credentialsFileName, projectId, topicId);
+            } else {
+                var credentials = System.Text.Encoding.UTF8.GetBytes(credentialsString);
+                return new GooglePubSubAttribute(credentials, projectId, topicId);
+            }
+
+        }
+
     }
 }

@@ -1,6 +1,4 @@
 ﻿using Google.Cloud.PubSub.V1;
-using Grpc.Auth;
-using Grpc.Core;
 using Microsoft.Azure.WebJobs;
 using System.Collections.Generic;
 using System.Linq;
@@ -15,9 +13,9 @@ namespace AzureFunctions.Extensions.GooglePubSub {
         private List<string> items = new List<string>();
 
         public AsyncCollector(GooglePubSubAttribute googlePubSubAttribute) {
-            this.googlePubSubAttribute = googlePubSubAttribute;
+            this.googlePubSubAttribute = GooglePubSubAttribute.GetAttributeByConfiguration(googlePubSubAttribute);
         }
-
+        
         void ICollector<string>.Add(string item) {
             items.Add(item);
         }
@@ -30,7 +28,7 @@ namespace AzureFunctions.Extensions.GooglePubSub {
         Task IAsyncCollector<string>.FlushAsync(CancellationToken cancellationToken) {
 
             if (items.Any()) {
-                PublisherClient publisher = CreatorService.GetPublisherClient(googlePubSubAttribute.CredentialsFileName);
+                PublisherClient publisher = CreatorService.GetPublisherClient(googlePubSubAttribute);
 
                 var topicName = new TopicName(googlePubSubAttribute.ProjectId, googlePubSubAttribute.TopicId);
                 var pubSubMessages = items.Select(c => new PubsubMessage() { Data = Google.Protobuf.ByteString.CopyFromUtf8(c) });

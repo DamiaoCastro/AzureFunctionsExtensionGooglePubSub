@@ -36,6 +36,14 @@ namespace AzureFunctions.Extensions.GooglePubSub {
             TopicId = topicId;
         }
 
+        /// <summary>
+        /// using this contructor, the settings will come from the configuration file.
+        /// you should configure:
+        /// 'your configuration node name'.Credentials -> string representation of the JSON credential files given in the google cloud "service account" bit
+        /// 'your configuration node name'.ProjectId -> projectId where the refered google pubsub is contained in
+        /// 'your configuration node name'.TopicId -> topicId of the refered google pubsub 
+        /// </summary>
+        /// <param name="configurationNodeName">prefix name that you gave to your configuration.</param>
         public GooglePubSubAttribute(string configurationNodeName) {
             if (string.IsNullOrWhiteSpace(configurationNodeName)) { throw new ArgumentNullException(nameof(configurationNodeName)); }
 

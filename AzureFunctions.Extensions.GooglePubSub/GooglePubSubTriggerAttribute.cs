@@ -38,7 +38,18 @@ namespace AzureFunctions.Extensions.GooglePubSub {
             TopicId = topicId;
             SubscriptionId = subscriptionId;
         }
-
+        
+        /// <summary>
+        /// using this contructor, the settings will come from the configuration file.
+        /// you should configure:
+        /// 'your configuration node name'.Credentials -> string representation of the JSON credential files given in the google cloud "service account" bit
+        /// 'your configuration node name'.ProjectId -> projectId where the refered google pubsub is contained in
+        /// 'your configuration node name'.TopicId -> topicId of the refered google pubsub 
+        /// 'your configuration node name'.SubscriptionId -> subscriptionId that this function will use
+        /// 'your configuration node name'.CreateSubscriptionIfDoesntExist -> bool to define if the subscription with the Id above should be created if doesn't exist
+        /// 'your configuration node name'.MaxBatchSize -> max number of messages to receive
+        /// </summary>
+        /// <param name="configurationNodeName">prefix name that you gave to your configuration.</param>
         public GooglePubSubTriggerAttribute(string configurationNodeName) {
             if (string.IsNullOrWhiteSpace(configurationNodeName)) { throw new ArgumentNullException(nameof(configurationNodeName)); }
 

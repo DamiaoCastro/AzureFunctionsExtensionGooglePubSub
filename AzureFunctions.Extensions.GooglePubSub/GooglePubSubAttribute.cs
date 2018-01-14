@@ -36,6 +36,14 @@ namespace AzureFunctions.Extensions.GooglePubSub {
             TopicId = topicId;
         }
 
+        internal GooglePubSubAttribute(string projectId, string topicId) {
+            if (string.IsNullOrWhiteSpace(projectId)) { throw new ArgumentNullException(nameof(projectId)); }
+            if (string.IsNullOrWhiteSpace(topicId)) { throw new ArgumentNullException(nameof(topicId)); }
+
+            ProjectId = projectId;
+            TopicId = topicId;
+        }
+
         /// <summary>
         /// using this contructor, the settings will come from the configuration file.
         /// you should configure:
@@ -64,12 +72,16 @@ namespace AzureFunctions.Extensions.GooglePubSub {
             var credentialsFileName = System.Environment.GetEnvironmentVariable($"{googlePubSubAttribute.ConfigurationNodeName}.CredentialsFileName", System.EnvironmentVariableTarget.Process);
             var projectId = System.Environment.GetEnvironmentVariable($"{googlePubSubAttribute.ConfigurationNodeName}.ProjectId", System.EnvironmentVariableTarget.Process);
             var topicId = System.Environment.GetEnvironmentVariable($"{googlePubSubAttribute.ConfigurationNodeName}.TopicId", System.EnvironmentVariableTarget.Process);
-            
-            if (string.IsNullOrWhiteSpace(credentialsString)) {
-                return new GooglePubSubAttribute(credentialsFileName, projectId, topicId);
+
+            if (string.IsNullOrWhiteSpace(credentialsString) && string.IsNullOrEmpty(credentialsFileName)) {
+                return new GooglePubSubAttribute(projectId, topicId);
             } else {
-                var credentials = System.Text.Encoding.UTF8.GetBytes(credentialsString);
-                return new GooglePubSubAttribute(credentials, projectId, topicId);
+                if (string.IsNullOrWhiteSpace(credentialsString)) {
+                    return new GooglePubSubAttribute(credentialsFileName, projectId, topicId);
+                } else {
+                    var credentials = System.Text.Encoding.UTF8.GetBytes(credentialsString);
+                    return new GooglePubSubAttribute(credentials, projectId, topicId);
+                }
             }
 
         }

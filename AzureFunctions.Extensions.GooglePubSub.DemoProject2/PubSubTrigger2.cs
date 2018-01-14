@@ -3,15 +3,16 @@ using System.Collections.Generic;
 
 namespace AzureFunctions.Extensions.GooglePubSub.DemoProject2 {
 
-    public static class PubSubTrigger {
+    public static class PubSubTrigger2 {
 
-        [FunctionName("PubSubTrigger")]
+        [Disable]
+        [FunctionName("PubSubTrigger2")]
         public static void Run(
-            [GooglePubSubTrigger("MyGooglePubSubConfig")]
+            [GooglePubSubTrigger("MyGooglePubSubConfig2")]
                 IEnumerable<string> messages) {
 
             foreach (var message in messages) {
-                System.Console.WriteLine(message);
+                System.Diagnostics.Debug.WriteLine(message);
             }
 
         }

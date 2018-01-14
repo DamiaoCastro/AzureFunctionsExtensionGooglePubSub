@@ -38,7 +38,17 @@ namespace AzureFunctions.Extensions.GooglePubSub {
             TopicId = topicId;
             SubscriptionId = subscriptionId;
         }
-        
+
+        internal GooglePubSubTriggerAttribute(string projectId, string topicId, string subscriptionId) {
+            if (string.IsNullOrWhiteSpace(projectId)) { throw new ArgumentNullException(nameof(projectId)); }
+            if (string.IsNullOrWhiteSpace(topicId)) { throw new ArgumentNullException(nameof(topicId)); }
+            if (string.IsNullOrWhiteSpace(subscriptionId)) { throw new ArgumentNullException(nameof(subscriptionId)); }
+
+            ProjectId = projectId;
+            TopicId = topicId;
+            SubscriptionId = subscriptionId;
+        }
+
         /// <summary>
         /// using this contructor, the settings will come from the configuration file.
         /// you should configure:
@@ -85,11 +95,15 @@ namespace AzureFunctions.Extensions.GooglePubSub {
             var subscriptionId = Environment.GetEnvironmentVariable($"{googlePubSubTriggerAttribute.ConfigurationNodeName}.{nameof(SubscriptionId)}", EnvironmentVariableTarget.Process);
 
             GooglePubSubTriggerAttribute newGooglePubSubTriggerAttribute = null;
-            if (string.IsNullOrWhiteSpace(credentialsString)) {
-                newGooglePubSubTriggerAttribute = new GooglePubSubTriggerAttribute(credentialsFileName, projectId, topicId, subscriptionId);
+            if (string.IsNullOrWhiteSpace(credentialsString) && string.IsNullOrEmpty(credentialsFileName)) {
+                newGooglePubSubTriggerAttribute = new GooglePubSubTriggerAttribute(projectId, topicId, subscriptionId);
             } else {
-                var credentials = System.Text.Encoding.UTF8.GetBytes(credentialsString);
-                newGooglePubSubTriggerAttribute = new GooglePubSubTriggerAttribute(credentials, projectId, topicId, subscriptionId);
+                if (string.IsNullOrWhiteSpace(credentialsString)) {
+                    newGooglePubSubTriggerAttribute = new GooglePubSubTriggerAttribute(credentialsFileName, projectId, topicId, subscriptionId);
+                } else {
+                    var credentials = System.Text.Encoding.UTF8.GetBytes(credentialsString);
+                    newGooglePubSubTriggerAttribute = new GooglePubSubTriggerAttribute(credentials, projectId, topicId, subscriptionId);
+                }
             }
 
             var createSubscriptionIfDoesntExist = Environment.GetEnvironmentVariable($"{googlePubSubTriggerAttribute.ConfigurationNodeName}.{nameof(CreateSubscriptionIfDoesntExist)}", EnvironmentVariableTarget.Process);

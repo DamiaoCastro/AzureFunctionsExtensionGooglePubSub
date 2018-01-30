@@ -286,3 +286,4 @@ __pycache__/
 *.btm.cs
 *.odx.cs
 *.xsd.cs
+/AzureFunctions.Extensions.GooglePubSub.DemoProject2/credentials.json

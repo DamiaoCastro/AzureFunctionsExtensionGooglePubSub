@@ -4,12 +4,25 @@
     "AzureWebJobsStorage": "UseDevelopmentStorage=true",
     "AzureWebJobsDashboard": "UseDevelopmentStorage=true",
 
-    "MyGooglePubSubConfig.Credentials": "{\"type\":\"service_account\",\"project_id\":\"projectId\",\"private_key_id\":\"....\",\"private_key\":\"....\",\"client_email\":\"...\",\"client_id\":\"....\",\"auth_uri\":\"https://accounts.google.com/o/oauth2/auth\",\"token_uri\":\"https://accounts.google.com/o/oauth2/token\",\"auth_provider_x509_cert_url\":\"https://www.googleapis.com/oauth2/v1/certs\",\"client_x509_cert_url\":\"https://www.googleapis.com/robot/v1/metadata/x509/....\"}",
-    "MyGooglePubSubConfig.ProjectId": "projectId",
-    "MyGooglePubSubConfig.TopicId": "topicId",
-    "MyGooglePubSubConfig.SubscriptionId": "subscriptionId",
-    "MyGooglePubSubConfig.CreateSubscriptionIfDoesntExist": true,
-    "MyGooglePubSubConfig.MaxBatchSize": 1000
+    "MyGooglePubSubConfig1.ProjectId": "damiao-1982",
+    "MyGooglePubSubConfig1.TopicId": "test1",
+    "MyGooglePubSubConfig1.SubscriptionId": "subscriptionId",
+    "MyGooglePubSubConfig1.CreateSubscriptionIfDoesntExist": true,
+    "MyGooglePubSubConfig1.MaxBatchSize": 1000,
+
+    "MyGooglePubSubConfig2.CredentialsFileName": "credentials.json",
+    "MyGooglePubSubConfig2.ProjectId": "damiao-1982",
+    "MyGooglePubSubConfig2.TopicId": "test1",
+    "MyGooglePubSubConfig2.SubscriptionId": "subscriptionId",
+    "MyGooglePubSubConfig2.CreateSubscriptionIfDoesntExist": true,
+    "MyGooglePubSubConfig2.MaxBatchSize": 1000,
+
+    "MyGooglePubSubConfig3.Credentials": "{ ... }",
+    "MyGooglePubSubConfig3.ProjectId": "damiao-1982",
+    "MyGooglePubSubConfig3.TopicId": "test1",
+    "MyGooglePubSubConfig3.SubscriptionId": "subscriptionId",
+    "MyGooglePubSubConfig3.CreateSubscriptionIfDoesntExist": true,
+    "MyGooglePubSubConfig3.MaxBatchSize": 1000
 
   }
 }

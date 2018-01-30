@@ -1,12 +1,11 @@
 ﻿using Google.Cloud.PubSub.V1;
 using Grpc.Auth;
 using Grpc.Core;
-using static Google.Cloud.PubSub.V1.PublisherClient;
 
 namespace AzureFunctions.Extensions.GooglePubSub {
     internal class CreatorService {
 
-        public static PublisherClient GetPublisherClient(TopicName topicName, GooglePubSubAttribute googlePubSubAttribute) {
+        public static Publisher.PublisherClient GetPublisherClient(GooglePubSubAttribute googlePubSubAttribute) {
 
             Channel channel = null;
             if (googlePubSubAttribute.Credentials != null) {
@@ -17,15 +16,10 @@ namespace AzureFunctions.Extensions.GooglePubSub {
                 }
             }
 
-            if (channel == null) {
-                return PublisherClient.Create(topicName);
-            } else {
-                return PublisherClient.Create(topicName, new ClientCreationSettings(null, null, channel, null));
-            }
-
+            return new Publisher.PublisherClient(channel);
         }
 
-        public static SubscriberClient GetSubscriberClient(GooglePubSubTriggerAttribute googlePubSubTriggerAttribute) {
+        public static Subscriber.SubscriberClient GetSubscriberClient(GooglePubSubTriggerAttribute googlePubSubTriggerAttribute) {
             Channel channel = null;
             if (googlePubSubTriggerAttribute.Credentials != null) {
                 channel = GetChannel(googlePubSubTriggerAttribute.Credentials);
@@ -35,11 +29,7 @@ namespace AzureFunctions.Extensions.GooglePubSub {
                 }
             }
 
-            if (channel == null) {
-                return SubscriberClient.Create();
-            } else {
-                return SubscriberClient.Create(channel);
-            }
+            return new Subscriber.SubscriberClient(channel);
         }
 
         public static Grpc.Core.Channel GetChannel(string credentialsFileName) {
@@ -52,10 +42,10 @@ namespace AzureFunctions.Extensions.GooglePubSub {
         }
 
         private static Grpc.Core.Channel GetChannel(byte[] credentials) {
-            var googleCredential = Google.Apis.Auth.OAuth2.GoogleCredential.FromStream(new System.IO.MemoryStream(credentials)).CreateScoped(SubscriberClient.DefaultScopes);
+            var googleCredential = Google.Apis.Auth.OAuth2.GoogleCredential.FromStream(new System.IO.MemoryStream(credentials))/*.CreateScoped(Subscriber.SubscriberClient.DefaultScopes)*/;
             ChannelCredentials channelCredentials = googleCredential.ToChannelCredentials();
-
-            Grpc.Core.Channel channel = new Grpc.Core.Channel(SubscriberClient.DefaultEndpoint.Host, SubscriberClient.DefaultEndpoint.Port, channelCredentials);
+            
+            Grpc.Core.Channel channel = new Grpc.Core.Channel("pubsub.googleapis.com", channelCredentials);
             return channel;
         }
 

@@ -5,7 +5,6 @@ namespace AzureFunctions.Extensions.GooglePubSub.DemoProject2 {
 
     public static class PubSubTrigger1 {
 
-        [Disable]
         [FunctionName("PubSubTrigger1")]
         public static void Run(
             [GooglePubSubTrigger("MyGooglePubSubConfig1")]

@@ -9,7 +9,7 @@ namespace AzureFunctions.Extensions.GooglePubSub
         
         private static ConcurrentDictionary<int, ExpiringPublisherClient> publisherClientCache = new ConcurrentDictionary<int, ExpiringPublisherClient>();
 
-        public static PublisherClient GetPublisherClient(GooglePubSubAttribute googlePubSubAttribute)
+        public static Publisher.PublisherClient GetPublisherClient(GooglePubSubAttribute googlePubSubAttribute)
         {
             var key = googlePubSubAttribute.GetHashCode();
 
@@ -40,14 +40,14 @@ namespace AzureFunctions.Extensions.GooglePubSub
         private class ExpiringPublisherClient
         {
 
-            public ExpiringPublisherClient(DateTime createdUtc, PublisherClient publisherClient)
+            public ExpiringPublisherClient(DateTime createdUtc, Publisher.PublisherClient publisherClient)
             {
                 CreatedUtc = createdUtc;
                 PublisherClient = publisherClient;
             }
 
             public DateTime CreatedUtc { get; }
-            public PublisherClient PublisherClient { get; }
+            public Publisher.PublisherClient PublisherClient { get; }
         }
 
     }

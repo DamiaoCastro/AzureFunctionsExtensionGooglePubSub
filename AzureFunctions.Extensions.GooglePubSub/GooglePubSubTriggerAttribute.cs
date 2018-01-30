@@ -85,6 +85,8 @@ namespace AzureFunctions.Extensions.GooglePubSub {
 
         public string ConfigurationNodeName { get; }
 
+        public int AcknowledgeDeadline { get; set; } = 600;
+
         internal static GooglePubSubTriggerAttribute GetAttributeByConfiguration(GooglePubSubTriggerAttribute googlePubSubTriggerAttribute) {
             if (string.IsNullOrWhiteSpace(googlePubSubTriggerAttribute.ConfigurationNodeName)) { return googlePubSubTriggerAttribute; }
 

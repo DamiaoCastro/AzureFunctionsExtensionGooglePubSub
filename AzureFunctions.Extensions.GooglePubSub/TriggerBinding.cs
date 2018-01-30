@@ -36,27 +36,6 @@ namespace AzureFunctions.Extensions.GooglePubSub {
         }
 
         public Task<IListener> CreateListenerAsync(ListenerFactoryContext context) {
-
-            //GooglePubSubTriggerAttribute googlePubSubTriggerAttribute = null;
-            //var triggerAttribute = parameter.CustomAttributes.FirstOrDefault(c => c.AttributeType.Name == nameof(GooglePubSubTriggerAttribute));
-            //if (triggerAttribute != null) {
-
-            //    var createSubscriptionIfDoesntExist = (bool)triggerAttribute.NamedArguments.FirstOrDefault(c => 
-            //            c.MemberName == nameof(GooglePubSubTriggerAttribute.CreateSubscriptionIfDoesntExist)
-            //        ).TypedValue.Value;
-
-            //    var maxBatchSize = (int)triggerAttribute.NamedArguments.FirstOrDefault(c =>
-            //            c.MemberName == nameof(GooglePubSubTriggerAttribute.MaxBatchSize)
-            //        ).TypedValue.Value;
-
-            //    googlePubSubTriggerAttribute = new GooglePubSubTriggerAttribute(
-            //        triggerAttribute.ConstructorArguments[0].Value?.ToString(),
-            //        triggerAttribute.ConstructorArguments[1].Value.ToString(),
-            //        triggerAttribute.ConstructorArguments[2].Value.ToString(),
-            //        triggerAttribute.ConstructorArguments[3].Value.ToString()
-            //        ) { CreateSubscriptionIfDoesntExist = createSubscriptionIfDoesntExist, MaxBatchSize = maxBatchSize };
-            //}
-
             return Task.FromResult<IListener>(new Listener(context.Executor, googlePubSubTriggerAttribute));
         }
 

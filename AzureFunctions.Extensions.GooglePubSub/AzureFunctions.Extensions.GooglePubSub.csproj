@@ -15,7 +15,7 @@ If this package was done by Microsoft itself would be under the namespace "Micro
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Google.Cloud.PubSub.V1" Version="1.0.0-beta15" />
+    <PackageReference Include="Google.Cloud.PubSub.V1" Version="1.0.0-beta16" />
     <PackageReference Include="Microsoft.Azure.WebJobs.Extensions" Version="3.0.0-beta3" />
   </ItemGroup>
 

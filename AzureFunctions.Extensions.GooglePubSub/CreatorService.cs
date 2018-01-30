@@ -1,11 +1,12 @@
 ﻿using Google.Cloud.PubSub.V1;
 using Grpc.Auth;
 using Grpc.Core;
+using static Google.Cloud.PubSub.V1.PublisherClient;
 
 namespace AzureFunctions.Extensions.GooglePubSub {
     internal class CreatorService {
 
-        public static PublisherClient GetPublisherClient(GooglePubSubAttribute googlePubSubAttribute) {
+        public static PublisherClient GetPublisherClient(TopicName topicName, GooglePubSubAttribute googlePubSubAttribute) {
 
             Channel channel = null;
             if (googlePubSubAttribute.Credentials != null) {
@@ -17,9 +18,9 @@ namespace AzureFunctions.Extensions.GooglePubSub {
             }
 
             if (channel == null) {
-                return PublisherClient.Create();
+                return PublisherClient.Create(topicName);
             } else {
-                return PublisherClient.Create(channel);
+                return PublisherClient.Create(topicName, new ClientCreationSettings(null, null, channel, null));
             }
 
         }

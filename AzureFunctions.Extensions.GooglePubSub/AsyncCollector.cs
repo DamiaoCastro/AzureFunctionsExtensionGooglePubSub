@@ -32,11 +32,19 @@ namespace AzureFunctions.Extensions.GooglePubSub {
                 Publisher.PublisherClient publisher = PublisherClientCache.GetPublisherClient(googlePubSubAttribute);
 
                 var topicName = new TopicName(googlePubSubAttribute.ProjectId, googlePubSubAttribute.TopicId);
-                var pubSubMessages = items.Select(c => new PubsubMessage() { Data = Google.Protobuf.ByteString.CopyFromUtf8(c) });
-                var publishRequest = new PublishRequest() { TopicAsTopicName = topicName };
-                publishRequest.Messages.AddRange(pubSubMessages);
 
-                return publisher.PublishAsync(publishRequest, null, null, cancellationToken).ResponseAsync;
+                var bulkSize = items.Count() / 1000;
+                var bulkTasks = new List<Task>();
+                for (var index = 0; index <= bulkSize; index++) {
+
+                    var pubSubMessages = items.Skip(index * 1000).Take(1000).Select(c => new PubsubMessage() { Data = Google.Protobuf.ByteString.CopyFromUtf8(c) });
+                    var publishRequest = new PublishRequest() { TopicAsTopicName = topicName };
+                    publishRequest.Messages.AddRange(pubSubMessages);
+
+                    bulkTasks.Add(publisher.PublishAsync(publishRequest, null, null, cancellationToken).ResponseAsync);
+                }
+
+                return Task.WhenAll(bulkTasks);
             }
 
             return Task.CompletedTask;

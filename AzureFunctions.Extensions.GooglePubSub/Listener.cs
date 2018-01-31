@@ -7,30 +7,24 @@ using System;
 using System.Linq;
 using System.Collections.Generic;
 
-namespace AzureFunctions.Extensions.GooglePubSub
-{
-    internal class Listener : IListener
-    {
+namespace AzureFunctions.Extensions.GooglePubSub {
+    internal class Listener : IListener {
 
         private ITriggeredFunctionExecutor executor;
         private readonly GooglePubSubTriggerAttribute triggerAttribute;
 
-        public Listener(ITriggeredFunctionExecutor executor, GooglePubSubTriggerAttribute triggerAttribute)
-        {
+        public Listener(ITriggeredFunctionExecutor executor, GooglePubSubTriggerAttribute triggerAttribute) {
             this.executor = executor;
             this.triggerAttribute = GooglePubSubTriggerAttribute.GetAttributeByConfiguration(triggerAttribute);
         }
 
-        public void Cancel()
-        {
+        public void Cancel() {
         }
 
-        public void Dispose()
-        {
+        public void Dispose() {
         }
 
-        public async Task StartAsync(CancellationToken cancellationToken)
-        {
+        public async Task StartAsync(CancellationToken cancellationToken) {
 
             string projectId = triggerAttribute.ProjectId;
             string topicId = triggerAttribute.TopicId;
@@ -38,21 +32,23 @@ namespace AzureFunctions.Extensions.GooglePubSub
 
             SubscriptionName subscriptionName = new SubscriptionName(projectId, subscriptionId);
             {
-                SubscriberClient subscriber = CreatorService.GetSubscriberClient(triggerAttribute);
+                Subscriber.SubscriberClient subscriber = CreatorService.GetSubscriberClient(triggerAttribute);
 
                 TopicName topicName = new TopicName(projectId, topicId);
 
                 Subscription subscription = null;
-                try
-                {
-                    subscription = await subscriber.GetSubscriptionAsync(subscriptionName, cancellationToken);
-                    await subscriber.ModifyAckDeadlineAsync(new ModifyAckDeadlineRequest() { AckDeadlineSeconds = triggerAttribute.AcknowledgeDeadline, SubscriptionAsSubscriptionName = subscriptionName });
-                }
-                catch (Exception) { }
+                try {
+                    subscription = await subscriber.GetSubscriptionAsync(new GetSubscriptionRequest() { SubscriptionAsSubscriptionName = subscriptionName }, null, null, cancellationToken);
+                    //await subscriber.ModifyAckDeadlineAsync(new ModifyAckDeadlineRequest() { AckDeadlineSeconds = triggerAttribute.AcknowledgeDeadline, SubscriptionAsSubscriptionName = subscriptionName });
+                } catch (Exception) { }
 
-                if (subscription == null && triggerAttribute.CreateSubscriptionIfDoesntExist)
-                {
-                    subscription = await subscriber.CreateSubscriptionAsync(subscriptionName, topicName, null, triggerAttribute.AcknowledgeDeadline, cancellationToken);
+                if (subscription == null && triggerAttribute.CreateSubscriptionIfDoesntExist) {
+                    subscription = await subscriber.CreateSubscriptionAsync(
+                        new Subscription() {
+                            AckDeadlineSeconds = triggerAttribute.AcknowledgeDeadline,
+                            SubscriptionName = subscriptionName,
+                            TopicAsTopicNameOneof = TopicNameOneof.From(topicName)
+                        }, null, null, cancellationToken);
                 }
             }
 
@@ -72,59 +68,58 @@ namespace AzureFunctions.Extensions.GooglePubSub
 
         }
 
-        private async Task StartLister(SubscriptionName subscriptionName, CancellationToken cancellationToken)
-        {
+        private async Task StartLister(SubscriptionName subscriptionName, CancellationToken cancellationToken) {
 
             //Seems that the subscriber loses performance through out the time.
-            //So, it will be replaced every 10 min.
-            SubscriberClient subscriber = CreatorService.GetSubscriberClient(triggerAttribute);
+            //So, it will be replaced every 5 min.
+            Subscriber.SubscriberClient subscriber = CreatorService.GetSubscriberClient(triggerAttribute);
 
             var t1 = DateTime.UtcNow;
 
-            while (!cancellationToken.IsCancellationRequested)
-            {
+            while (!cancellationToken.IsCancellationRequested) {
 
-                if ((DateTime.UtcNow - t1).TotalMinutes > 10)
-                {
+                if ((DateTime.UtcNow - t1).TotalMinutes >= 5) {
                     subscriber = CreatorService.GetSubscriberClient(triggerAttribute);
                     t1 = DateTime.UtcNow;
                 }
 
                 PullResponse pullResponse = null;
-                try
-                {
-                    pullResponse = await subscriber.PullAsync(subscriptionName, false, triggerAttribute.MaxBatchSize, cancellationToken);
-                }
-                catch (Exception) { }
+                try {
+                    pullResponse = await subscriber.PullAsync(new PullRequest() {
+                        SubscriptionAsSubscriptionName = subscriptionName,
+                        ReturnImmediately = false,
+                        MaxMessages = triggerAttribute.MaxBatchSize
+                    }, null, null, cancellationToken);
+                } catch (Exception) { }
 
-                if (pullResponse != null && pullResponse.ReceivedMessages != null && pullResponse.ReceivedMessages.Count > 0)
-                {
+                if (pullResponse != null && pullResponse.ReceivedMessages != null && pullResponse.ReceivedMessages.Count > 0) {
 
                     IEnumerable<string> messages = pullResponse.ReceivedMessages.Select(c => c.Message.Data.ToStringUtf8());
                     var ackIds = pullResponse.ReceivedMessages.Select(c => c.AckId);
 
-                    TriggeredFunctionData input = new TriggeredFunctionData
-                    {
+                    TriggeredFunctionData input = new TriggeredFunctionData {
                         TriggerValue = messages
                     };
 
                     await executor.TryExecuteAsync(input, cancellationToken)
-                        .ContinueWith(async (functionResultTask) =>
-                        {
+                        .ContinueWith(async (functionResultTask) => {
 
                             FunctionResult functionResult = functionResultTask.Result;
-                            if (functionResult.Succeeded)
-                            {
-                                await subscriber.AcknowledgeAsync(subscriptionName, ackIds, cancellationToken);
-                            }
+                            if (functionResult.Succeeded) {
+                                var acknowledgeRequest = new AcknowledgeRequest() {
+                                    SubscriptionAsSubscriptionName = subscriptionName
+                                };
+                                acknowledgeRequest.AckIds.Add(ackIds);
 
-                        }, cancellationToken);
+                                await subscriber.AcknowledgeAsync(acknowledgeRequest, null, null, cancellationToken).ResponseAsync;
+                            }
+                            
+                        }, cancellationToken).Unwrap();
                 }
             }
         }
 
-        public Task StopAsync(CancellationToken cancellationToken)
-        {
+        public Task StopAsync(CancellationToken cancellationToken) {
             return Task.FromResult(true);
         }
 

@@ -32,17 +32,42 @@ namespace AzureFunctions.Extensions.GooglePubSub {
             return new Subscriber.SubscriberClient(channel);
         }
 
-        public static Grpc.Core.Channel GetChannel(string credentialsFileName) {
+        public static byte[] GetCredentials(GooglePubSubTriggerAttribute googlePubSubTriggerAttribute)
+        {
+            if (googlePubSubTriggerAttribute.Credentials != null)
+            {
+                return googlePubSubTriggerAttribute.Credentials;
+            }
+            else
+            {
+                if (!string.IsNullOrWhiteSpace(googlePubSubTriggerAttribute.CredentialsFileName))
+                {
+                    return GetCredentials(googlePubSubTriggerAttribute.CredentialsFileName);
+                }
+            }
+
+            return null;
+        }
+
+        public static Grpc.Core.Channel GetChannel(string credentialsFileName)
+        {
             if (string.IsNullOrWhiteSpace(credentialsFileName)) { return null; }
 
-            var path = System.IO.Path.GetDirectoryName(typeof(TriggerBindingProvider).Assembly.Location);
-            var fullPath = System.IO.Path.Combine(path, "..", credentialsFileName);
-            var credentials = System.IO.File.ReadAllBytes(fullPath);
+            byte[] credentials = GetCredentials(credentialsFileName);
             return GetChannel(credentials);
         }
 
+        private static byte[] GetCredentials(string credentialsFileName)
+        {
+            var path = System.IO.Path.GetDirectoryName(typeof(TriggerBindingProvider).Assembly.Location);
+            var fullPath = System.IO.Path.Combine(path, "..", credentialsFileName);
+            var credentials = System.IO.File.ReadAllBytes(fullPath);
+            return credentials;
+        }
+
         private static Grpc.Core.Channel GetChannel(byte[] credentials) {
-            var googleCredential = Google.Apis.Auth.OAuth2.GoogleCredential.FromStream(new System.IO.MemoryStream(credentials))/*.CreateScoped(Subscriber.SubscriberClient.DefaultScopes)*/;
+            var googleCredential = Google.Apis.Auth.OAuth2.GoogleCredential.FromStream(new System.IO.MemoryStream(credentials)).CreateScoped("https://www.googleapis.com/auth/pubsub");
+            
             ChannelCredentials channelCredentials = googleCredential.ToChannelCredentials();
             
             Grpc.Core.Channel channel = new Grpc.Core.Channel("pubsub.googleapis.com", channelCredentials);

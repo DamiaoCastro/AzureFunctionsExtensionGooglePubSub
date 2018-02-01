@@ -2,27 +2,26 @@
   "IsEncrypted": false,
   "Values": {
     "AzureWebJobsStorage": "UseDevelopmentStorage=true",
-    "AzureWebJobsDashboard": "UseDevelopmentStorage=true",
 
     "MyGooglePubSubConfig1.ProjectId": "damiao-1982",
     "MyGooglePubSubConfig1.TopicId": "test1",
     "MyGooglePubSubConfig1.SubscriptionId": "subscriptionId",
     "MyGooglePubSubConfig1.CreateSubscriptionIfDoesntExist": true,
-    "MyGooglePubSubConfig1.MaxBatchSize": 1000,
+    "MyGooglePubSubConfig1.MaxBatchSize": 100,
 
     "MyGooglePubSubConfig2.CredentialsFileName": "credentials.json",
     "MyGooglePubSubConfig2.ProjectId": "damiao-1982",
     "MyGooglePubSubConfig2.TopicId": "test1",
     "MyGooglePubSubConfig2.SubscriptionId": "subscriptionId",
     "MyGooglePubSubConfig2.CreateSubscriptionIfDoesntExist": true,
-    "MyGooglePubSubConfig2.MaxBatchSize": 1000,
+    "MyGooglePubSubConfig2.MaxBatchSize": 10,
 
     "MyGooglePubSubConfig3.Credentials": "{ ... }",
     "MyGooglePubSubConfig3.ProjectId": "damiao-1982",
     "MyGooglePubSubConfig3.TopicId": "test1",
     "MyGooglePubSubConfig3.SubscriptionId": "subscriptionId",
     "MyGooglePubSubConfig3.CreateSubscriptionIfDoesntExist": true,
-    "MyGooglePubSubConfig3.MaxBatchSize": 1000
+    "MyGooglePubSubConfig3.MaxBatchSize": 100
 
   }
 }

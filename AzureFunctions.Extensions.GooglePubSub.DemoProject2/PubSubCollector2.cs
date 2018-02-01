@@ -6,11 +6,11 @@ namespace AzureFunctions.Extensions.GooglePubSub.DemoProject2 {
         [Disable]
         [FunctionName("PubSubCollector2")]
         public static void Run(
-           [TimerTrigger("0 */1 * * * *", RunOnStartup = true)]TimerInfo myTimer,
+           [TimerTrigger("20 */1 * * * *", RunOnStartup = true)]TimerInfo myTimer,
            [GooglePubSub("MyGooglePubSubConfig2")] ICollector<string> messages
            ) {
 
-            messages.Add("I have a new message from PubSubCollector2");
+            PubSubCollector1.Run(myTimer, messages);
 
         }
     }

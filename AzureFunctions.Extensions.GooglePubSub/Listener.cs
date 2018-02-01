@@ -8,30 +8,24 @@ using System.Linq;
 using System.Collections.Generic;
 using System.Net.Http.Headers;
 
-namespace AzureFunctions.Extensions.GooglePubSub
-{
-    internal class Listener : IListener
-    {
+namespace AzureFunctions.Extensions.GooglePubSub {
+    internal class Listener : IListener {
 
         private ITriggeredFunctionExecutor executor;
         private readonly GooglePubSubTriggerAttribute triggerAttribute;
 
-        public Listener(ITriggeredFunctionExecutor executor, GooglePubSubTriggerAttribute triggerAttribute)
-        {
+        public Listener(ITriggeredFunctionExecutor executor, GooglePubSubTriggerAttribute triggerAttribute) {
             this.executor = executor;
             this.triggerAttribute = GooglePubSubTriggerAttribute.GetAttributeByConfiguration(triggerAttribute);
         }
 
-        public void Cancel()
-        {
+        public void Cancel() {
         }
 
-        public void Dispose()
-        {
+        public void Dispose() {
         }
 
-        public async Task StartAsync(CancellationToken cancellationToken)
-        {
+        public async Task StartAsync(CancellationToken cancellationToken) {
 
             string projectId = triggerAttribute.ProjectId;
             string topicId = triggerAttribute.TopicId;
@@ -44,18 +38,14 @@ namespace AzureFunctions.Extensions.GooglePubSub
                 TopicName topicName = new TopicName(projectId, topicId);
 
                 Subscription subscription = null;
-                try
-                {
+                try {
                     subscription = await subscriber.GetSubscriptionAsync(new GetSubscriptionRequest() { SubscriptionAsSubscriptionName = subscriptionName }, null, null, cancellationToken);
                     //await subscriber.ModifyAckDeadlineAsync(new ModifyAckDeadlineRequest() { AckDeadlineSeconds = triggerAttribute.AcknowledgeDeadline, SubscriptionAsSubscriptionName = subscriptionName });
-                }
-                catch (Exception) { }
+                } catch (Exception) { }
 
-                if (subscription == null && triggerAttribute.CreateSubscriptionIfDoesntExist)
-                {
+                if (subscription == null && triggerAttribute.CreateSubscriptionIfDoesntExist) {
                     subscription = await subscriber.CreateSubscriptionAsync(
-                        new Subscription()
-                        {
+                        new Subscription() {
                             AckDeadlineSeconds = triggerAttribute.AcknowledgeDeadline,
                             SubscriptionName = subscriptionName,
                             TopicAsTopicNameOneof = TopicNameOneof.From(topicName)
@@ -63,103 +53,86 @@ namespace AzureFunctions.Extensions.GooglePubSub
                 }
             }
 
-            //TODO: clean this mess
-            var t1 = StartLister(cancellationToken);
-            var t2 = StartLister(cancellationToken);
-            var t3 = StartLister(cancellationToken);
-            var t4 = StartLister(cancellationToken);
-            var t5 = StartLister(cancellationToken);
-            var t6 = StartLister(cancellationToken);
-            var t7 = StartLister(cancellationToken);
-            var t8 = StartLister(cancellationToken);
-            var t9 = StartLister(cancellationToken);
-            var t10 = StartLister(cancellationToken);
-
-            await Task.WhenAll(t1, t2, t3, t4, t5, t6, t7, t8, t9, t10);
-        }
-
-        private async Task StartLister(CancellationToken cancellationToken)
-        {
-
             var credentials = CreatorService.GetCredentials(triggerAttribute);
+
+            var listTasks = new List<Task>();
+            var index = 0;
+
+            var processorCount = Math.Max(4, Environment.ProcessorCount);
+
+            while (!cancellationToken.IsCancellationRequested) {
+
+                while (listTasks.Count() <= processorCount) {
+                    var item = ListenerPull(credentials, index++, cancellationToken);
+                    listTasks.Add(item);
+                }
+
+                await Task.WhenAll(listTasks);
+            }
+
+        }
+        private async Task ListenerPull(byte[] credentials, int index, CancellationToken cancellationToken) {
+
             PubSub.SubscriberClient subscriberClient = new PubSub.SubscriberClient(credentials, triggerAttribute.ProjectId, triggerAttribute.SubscriptionId);
-
-            while (!cancellationToken.IsCancellationRequested)
-            {
-                var (input, ackIds) = await GetTypeInput(subscriberClient, cancellationToken);
-
-                await executor.TryExecuteAsync(input, cancellationToken)
-                        .ContinueWith(async (functionResultTask) =>
-                        {
-
-                            FunctionResult functionResult = functionResultTask.Result;
-                            if (functionResult.Succeeded)
-                            {
-                                await subscriberClient.AcknowledgeAsync(ackIds, cancellationToken);
-                            }
-
-                        }, cancellationToken).Unwrap();
+            while (!cancellationToken.IsCancellationRequested) {
+                await ListenerPull(subscriberClient, index, cancellationToken);
             }
-
-            
         }
 
-        private async Task<(TriggeredFunctionData messages, IEnumerable<string> ackIds)> GetTypeInput(SubscriptionName subscriptionName, Subscriber.SubscriberClient subscriber, CancellationToken cancellationToken)
-        {
+        private Task ListenerPull(PubSub.SubscriberClient subscriberClient, int index, CancellationToken cancellationToken) {
 
-            var pullRequest = new PullRequest()
-            {
-                SubscriptionAsSubscriptionName = subscriptionName,
-                ReturnImmediately = false,
-                MaxMessages = triggerAttribute.MaxBatchSize
-            };
+            return GetTypeInput(subscriberClient, cancellationToken)
+                .ContinueWith((typeInputTask) => {
+                    (TriggeredFunctionData input, IEnumerable<string> ackIds) = typeInputTask.Result;
 
-            var pull = await subscriber.PullAsync(pullRequest, null, null, cancellationToken);
+                    if (input != null && ackIds != null) {
 
-            ReceivedMessage[] receivedMessages = pull.ReceivedMessages?.ToArray();
-            pull = null;
+                        System.Diagnostics.Debug.WriteLine($"{DateTime.Now:HH:mm:ss:fff} - {index} - received {ackIds.Count()} messages");
 
-            if (receivedMessages != null && receivedMessages != null && receivedMessages.Count() > 0)
-            {
+                        return executor.TryExecuteAsync(input, cancellationToken)
+                                .ContinueWith((functionResultTask) => {
 
-                IEnumerable<string> messages = receivedMessages.Select(c => c.Message.Data.ToStringUtf8()).ToArray();
-                IEnumerable<string> ackIds = receivedMessages.Select(c => c.AckId).ToArray();
-                receivedMessages = null;
+                                    FunctionResult functionResult = functionResultTask.Result;
+                                    if (functionResult.Succeeded) {
+                                        return subscriberClient.AcknowledgeAsync(ackIds, cancellationToken);
+                                    }
 
-                TriggeredFunctionData input = new TriggeredFunctionData
-                {
-                    TriggerValue = messages
-                };
+                                    return Task.CompletedTask;
 
-                return (input, ackIds);
-            }
+                                }, cancellationToken).Unwrap();
 
-            return ((TriggeredFunctionData)null, (IEnumerable<string>)null);
+                    }
+
+                    return Task.CompletedTask;
+
+                }).Unwrap();
+
         }
 
-        private async Task<(TriggeredFunctionData messages, IEnumerable<string> ackIds)> GetTypeInput(PubSub.SubscriberClient subscriberClient, CancellationToken cancellationToken)
-        {
+        private Task<(TriggeredFunctionData messages, IEnumerable<string> ackIds)> GetTypeInput(PubSub.SubscriberClient subscriberClient, CancellationToken cancellationToken) {
 
-            var pull = await subscriberClient.PullAsync(triggerAttribute.MaxBatchSize, false, cancellationToken);
+            return subscriberClient.PullAsync(triggerAttribute.MaxBatchSize, false, cancellationToken)
+                .ContinueWith((pullTask) => {
 
-            if (pull != null && pull.receivedMessages != null && pull.receivedMessages.Count() > 0)
-            {
-                IEnumerable<string> messages = pull.receivedMessages.Select(c => c.message.dataString);
-                IEnumerable<string> ackIds = pull.receivedMessages.Select(c => c.ackId);
+                    var pull = pullTask.Result;
 
-                TriggeredFunctionData input = new TriggeredFunctionData
-                {
-                    TriggerValue = messages
-                };
+                    if (pull != null && pull.receivedMessages != null && pull.receivedMessages.Count() > 0) {
+                        IEnumerable<string> messages = pull.receivedMessages.Select(c => c.message.dataString);
+                        IEnumerable<string> ackIds = pull.receivedMessages.Select(c => c.ackId);
 
-                return (input, ackIds);
-            }
+                        TriggeredFunctionData input = new TriggeredFunctionData {
+                            TriggerValue = messages
+                        };
 
-            return ((TriggeredFunctionData)null, (IEnumerable<string>)null);
+                        return (input, ackIds);
+                    }
+
+                    return ((TriggeredFunctionData)null, (IEnumerable<string>)null);
+                });
+
         }
 
-        public Task StopAsync(CancellationToken cancellationToken)
-        {
+        public Task StopAsync(CancellationToken cancellationToken) {
             return Task.FromResult(true);
         }
 

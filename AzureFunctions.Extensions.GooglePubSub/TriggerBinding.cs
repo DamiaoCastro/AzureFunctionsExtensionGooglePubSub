@@ -70,9 +70,6 @@ namespace AzureFunctions.Extensions.GooglePubSub {
         private IReadOnlyDictionary<string, object> GetBindingData(IEnumerable<string> value) {
             Dictionary<string, object> bindingData = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase);
             bindingData.Add("GooglePubSubTrigger", value);
-
-            // TODO: Add any additional binding data
-
             return bindingData;
         }
 

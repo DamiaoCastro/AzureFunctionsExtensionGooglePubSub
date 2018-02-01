@@ -13,6 +13,8 @@ namespace AzureFunctions.Extensions.GooglePubSub {
             } else {
                 if (!string.IsNullOrWhiteSpace(googlePubSubAttribute.CredentialsFileName)) {
                     channel = GetChannel(googlePubSubAttribute.CredentialsFileName);
+                } else {
+                    channel = new Grpc.Core.Channel("pubsub.googleapis.com", ChannelCredentials.Insecure);
                 }
             }
 

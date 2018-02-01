@@ -40,7 +40,6 @@ namespace AzureFunctions.Extensions.GooglePubSub {
                 Subscription subscription = null;
                 try {
                     subscription = await subscriber.GetSubscriptionAsync(new GetSubscriptionRequest() { SubscriptionAsSubscriptionName = subscriptionName }, null, null, cancellationToken);
-                    //await subscriber.ModifyAckDeadlineAsync(new ModifyAckDeadlineRequest() { AckDeadlineSeconds = triggerAttribute.AcknowledgeDeadline, SubscriptionAsSubscriptionName = subscriptionName });
                 } catch (Exception) { }
 
                 if (subscription == null && triggerAttribute.CreateSubscriptionIfDoesntExist) {
@@ -58,11 +57,11 @@ namespace AzureFunctions.Extensions.GooglePubSub {
             var listTasks = new List<Task>();
             var index = 0;
 
-            var processorCount = Math.Max(4, Environment.ProcessorCount);
+            var processorCount = Math.Max(2, Environment.ProcessorCount);
 
             while (!cancellationToken.IsCancellationRequested) {
 
-                while (listTasks.Count() <= processorCount) {
+                while (listTasks.Count() < processorCount) {
                     var item = ListenerPull(credentials, index++, cancellationToken);
                     listTasks.Add(item);
                 }
@@ -87,8 +86,9 @@ namespace AzureFunctions.Extensions.GooglePubSub {
 
                     if (input != null && ackIds != null) {
 
-                        System.Diagnostics.Debug.WriteLine($"{DateTime.Now:HH:mm:ss:fff} - {index} - received {ackIds.Count()} messages");
-
+//#if DEBUG
+//                        System.Diagnostics.Debug.WriteLine($"{DateTime.Now:HH:mm:ss:fff} - {index} - received {ackIds.Count()} messages");
+//#endif
                         return executor.TryExecuteAsync(input, cancellationToken)
                                 .ContinueWith((functionResultTask) => {
 

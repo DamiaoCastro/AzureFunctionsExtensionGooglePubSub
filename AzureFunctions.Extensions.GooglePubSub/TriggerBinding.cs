@@ -6,13 +6,10 @@ using Microsoft.Azure.WebJobs.Host.Listeners;
 using Microsoft.Azure.WebJobs.Host.Protocols;
 using System.Threading.Tasks;
 using System.Reflection;
-using System.Linq;
 
 namespace AzureFunctions.Extensions.GooglePubSub {
 
     internal class TriggerBinding : ITriggerBinding {
-
-        public IReadOnlyDictionary<string, Type> BindingDataContract => bindingContract;
 
         private readonly GooglePubSubTriggerAttribute googlePubSubTriggerAttribute;
         private ParameterInfo parameter;
@@ -24,9 +21,11 @@ namespace AzureFunctions.Extensions.GooglePubSub {
             bindingContract = CreateBindingDataContract();
         }
 
-        public Type TriggerValueType { get { return typeof(IEnumerable<string>); } }
+        IReadOnlyDictionary<string, Type> ITriggerBinding.BindingDataContract => bindingContract;
 
-        public Task<ITriggerData> BindAsync(object value, ValueBindingContext context) {
+        Type ITriggerBinding.TriggerValueType { get { return typeof(IEnumerable<string>); } }
+
+        Task<ITriggerData> ITriggerBinding.BindAsync(object value, ValueBindingContext context) {
             // TODO: Perform any required conversions on the value
             // E.g. convert from Dashboard invoke string to our trigger
             // value type
@@ -35,11 +34,11 @@ namespace AzureFunctions.Extensions.GooglePubSub {
             return Task.FromResult<ITriggerData>(new TriggerData(valueBinder, GetBindingData(triggerValue)));
         }
 
-        public Task<IListener> CreateListenerAsync(ListenerFactoryContext context) {
+        Task<IListener> ITriggerBinding.CreateListenerAsync(ListenerFactoryContext context) {
             return Task.FromResult<IListener>(new Listener(context.Executor, googlePubSubTriggerAttribute));
         }
 
-        public ParameterDescriptor ToParameterDescriptor() {
+        ParameterDescriptor ITriggerBinding.ToParameterDescriptor() {
             return new GooglePubSubTriggerParameterDescriptor {
                 Name = parameter.Name,
                 DisplayHints = new ParameterDisplayHints {

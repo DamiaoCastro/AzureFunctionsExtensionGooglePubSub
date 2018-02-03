@@ -2,11 +2,9 @@
 using System.Threading.Tasks;
 using Microsoft.Azure.WebJobs.Host.Executors;
 using Microsoft.Azure.WebJobs.Host.Listeners;
-using Google.Cloud.PubSub.V1;
 using System;
 using System.Linq;
 using System.Collections.Generic;
-using System.Net.Http.Headers;
 using AzureFunctions.Extensions.GooglePubSub.PubSub;
 
 namespace AzureFunctions.Extensions.GooglePubSub {
@@ -20,65 +18,54 @@ namespace AzureFunctions.Extensions.GooglePubSub {
             this.triggerAttribute = GooglePubSubTriggerAttribute.GetAttributeByConfiguration(triggerAttribute);
         }
 
-        public void Cancel() {
+        void IListener.Cancel() {
         }
 
         public void Dispose() {
         }
 
-        public async Task StartAsync(CancellationToken cancellationToken) {
-
-            await CreateSubscription(cancellationToken);
+        async Task IListener.StartAsync(CancellationToken cancellationToken) {
 
             var credentials = CreatorService.GetCredentials(triggerAttribute);
-
-            var listTasks = new List<Task>();
-            var index = 0;
+            PubSub.SubscriberClient subscriberClient = new PubSub.SubscriberClient(credentials, triggerAttribute.ProjectId, triggerAttribute.SubscriptionId);
+            
+            await CreateSubscription(subscriberClient, cancellationToken);
 
             var processorCount = Math.Max(2, Environment.ProcessorCount);
 
-            while (!cancellationToken.IsCancellationRequested) {
-
-                //while (listTasks.Count() < processorCount) {
-                var item = ListenerPull(credentials, index++, cancellationToken);
-                listTasks.Add(item);
-                //}
-
-                await Task.WhenAll(listTasks);
-            }
-
-        }
-
-        private async Task CreateSubscription(CancellationToken cancellationToken) {
-
-            SubscriptionName subscriptionName = new SubscriptionName(triggerAttribute.ProjectId, triggerAttribute.SubscriptionId);
-            {
-                Subscriber.SubscriberClient subscriber = CreatorService.GetSubscriberClient(triggerAttribute);
-
-                TopicName topicName = new TopicName(triggerAttribute.ProjectId, triggerAttribute.TopicId);
-
-                Subscription subscription = null;
-                try {
-                    subscription = await subscriber.GetSubscriptionAsync(new GetSubscriptionRequest() { SubscriptionAsSubscriptionName = subscriptionName }, null, null, cancellationToken);
-                } catch (Exception) { }
-
-                if (subscription == null && triggerAttribute.CreateSubscriptionIfDoesntExist) {
-                    subscription = await subscriber.CreateSubscriptionAsync(
-                        new Subscription() {
-                            AckDeadlineSeconds = triggerAttribute.AcknowledgeDeadline,
-                            SubscriptionName = subscriptionName,
-                            TopicAsTopicNameOneof = TopicNameOneof.From(topicName)
-                        }, null, null, cancellationToken);
+            var index = 0;
+            Parallel.For(1, processorCount, async (t) => {
+                while (!cancellationToken.IsCancellationRequested) {
+                    await ListenerPull(subscriberClient, index, cancellationToken);
                 }
-            }
+            });
+
+            //var listTasks = new List<Task>();
+            //while (!cancellationToken.IsCancellationRequested) {
+            //while (listTasks.Count() < processorCount) {
+            //var item = ListenerPull(credentials, index++, cancellationToken);
+            //listTasks.Add(item);
+            //}
+
+            //await Task.WhenAll(listTasks);
+            //}
+
         }
 
-        private async Task ListenerPull(byte[] credentials, int index, CancellationToken cancellationToken) {
+        Task IListener.StopAsync(CancellationToken cancellationToken) {
+            return Task.FromResult(true);
+        }
 
-            PubSub.SubscriberClient subscriberClient = new PubSub.SubscriberClient(credentials, triggerAttribute.ProjectId, triggerAttribute.SubscriptionId);
-            while (!cancellationToken.IsCancellationRequested) {
-                await ListenerPull(subscriberClient, index, cancellationToken);
-            }
+        private Task CreateSubscription(PubSub.SubscriberClient subscriberClient, CancellationToken cancellationToken) {
+            
+            var createSubscriptionRequest = new CreateSubscriptionRequest() {
+                ackDeadlineSeconds = triggerAttribute.AcknowledgeDeadline,
+                name = triggerAttribute.SubscriptionId,
+                topic = $"projects/{triggerAttribute.ProjectId}/topics/{triggerAttribute.TopicId}"
+            };
+            
+            return subscriberClient.CreateAsync(createSubscriptionRequest, cancellationToken);
+
         }
 
         private Task ListenerPull(PubSub.SubscriberClient subscriberClient, int index, CancellationToken cancellationToken) {
@@ -88,16 +75,14 @@ namespace AzureFunctions.Extensions.GooglePubSub {
                     IEnumerable<(TriggeredFunctionData, IEnumerable<string>)> buckets = typeInputTask.Result;
 
                     if (buckets != null && buckets.Any()) {
-                        //var listExecutions = new List<Task>();
 
-                        Parallel.ForEach(buckets, async (item) => {
-                            (TriggeredFunctionData input, IEnumerable<string> ackIds) = item;
-
+                        var listExecutions = new List<Task>();
+                        foreach ((TriggeredFunctionData input, IEnumerable<string> ackIds) in buckets) {
                             if (input != null && ackIds != null && ackIds.Any()) {
-#if DEBUG
-                                System.Diagnostics.Debug.WriteLine($"{DateTime.Now:HH:mm:ss:fff} - {index} - received {ackIds.Count()} messages");
-#endif
-                                await executor.TryExecuteAsync(input, cancellationToken)
+
+                                //System.Diagnostics.Debug.WriteLine($"{DateTime.Now:HH:mm:ss:fff} - {index} - received {ackIds.Count()} messages");
+
+                                var t = executor.TryExecuteAsync(input, cancellationToken)
                                         .ContinueWith((functionResultTask) => {
 
                                             FunctionResult functionResult = functionResultTask.Result;
@@ -109,37 +94,17 @@ namespace AzureFunctions.Extensions.GooglePubSub {
 
                                         }, cancellationToken).Unwrap();
 
+                                listExecutions.Add(t);
+
                             }
-                        });
+                        }
 
-                        //                        foreach ((TriggeredFunctionData input, IEnumerable<string> ackIds) in buckets) {
-                        //                            if (input != null && ackIds != null && ackIds.Any()) {
-                        //#if DEBUG
-                        //                                System.Diagnostics.Debug.WriteLine($"{DateTime.Now:HH:mm:ss:fff} - {index} - received {ackIds.Count()} messages");
-                        //#endif
-                        //                                var t = executor.TryExecuteAsync(input, cancellationToken)
-                        //                                        .ContinueWith((functionResultTask) => {
-
-                        //                                            FunctionResult functionResult = functionResultTask.Result;
-                        //                                            if (functionResult.Succeeded) {
-                        //                                                return subscriberClient.AcknowledgeAsync(ackIds, cancellationToken);
-                        //                                            }
-
-                        //                                            return Task.CompletedTask;
-
-                        //                                        }, cancellationToken).Unwrap();
-
-                        //                                listExecutions.Add(t);
-
-                        //                            }
-                        //                        }
-
-                        //return Task.WhenAll(listExecutions)
-                        //    .ContinueWith((listExecutionsTask) => {
-                        //        if (listExecutionsTask.IsFaulted) {
-                        //            throw listExecutionsTask.Exception.InnerException;
-                        //        }
-                        //    });
+                        return Task.WhenAll(listExecutions)
+                            .ContinueWith((listExecutionsTask) => {
+                                if (listExecutionsTask.IsFaulted) {
+                                    throw listExecutionsTask.Exception.InnerException;
+                                }
+                            });
                     }
 
                     return Task.CompletedTask;
@@ -172,10 +137,6 @@ namespace AzureFunctions.Extensions.GooglePubSub {
             }
 
             return (IEnumerable<(TriggeredFunctionData messages, IEnumerable<string> ackIds)>)null;
-        }
-
-        public Task StopAsync(CancellationToken cancellationToken) {
-            return Task.FromResult(true);
         }
 
     }

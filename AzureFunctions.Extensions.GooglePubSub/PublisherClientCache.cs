@@ -1,53 +1,24 @@
-﻿using Google.Cloud.PubSub.V1;
-using System;
-using System.Collections.Concurrent;
+﻿using System.Collections.Concurrent;
 
-namespace AzureFunctions.Extensions.GooglePubSub
-{
-    public static class PublisherClientCache
-    {
+namespace AzureFunctions.Extensions.GooglePubSub {
+    public static class PublisherClientCache {
         
-        private static ConcurrentDictionary<int, ExpiringPublisherClient> publisherClientCache = new ConcurrentDictionary<int, ExpiringPublisherClient>();
+        private static ConcurrentDictionary<int, PubSub.PublisherClient> publisherClientV2Cache = new ConcurrentDictionary<int, PubSub.PublisherClient>();
 
-        public static Publisher.PublisherClient GetPublisherClient(GooglePubSubAttribute googlePubSubAttribute)
-        {
+        internal static PubSub.PublisherClient GetPublisherClientV2(GooglePubSubAttribute googlePubSubAttribute) {
+
             var key = googlePubSubAttribute.GetHashCode();
 
-            if (publisherClientCache.ContainsKey(key))
-            {
-                var expiringBigQueryService = publisherClientCache[key];
-                if ((DateTime.UtcNow - expiringBigQueryService.CreatedUtc).TotalMinutes > 9)
-                {
-                    var bigQueryService = CreatorService.GetPublisherClient(googlePubSubAttribute);
-                    var expiringPublisherClient1 = new ExpiringPublisherClient(DateTime.UtcNow, bigQueryService);
-                    publisherClientCache.AddOrUpdate(key, expiringPublisherClient1, (newkey, oldValue) => expiringPublisherClient1);
+            if (publisherClientV2Cache.ContainsKey(key)) {
+                return publisherClientV2Cache[key];
+            } else {
+                var credentials = CreatorService.GetCredentials(googlePubSubAttribute);
 
-                    return bigQueryService;
-                }
-
-                return expiringBigQueryService.PublisherClient;
-            }
-            else
-            {
-                var bigQueryService = CreatorService.GetPublisherClient(googlePubSubAttribute);
-                var expiringPublisherClient = new ExpiringPublisherClient(DateTime.UtcNow, bigQueryService);
-                publisherClientCache.AddOrUpdate(key, expiringPublisherClient, (newkey, oldValue) => expiringPublisherClient);
-
-                return bigQueryService;
-            }
-        }
-
-        private class ExpiringPublisherClient
-        {
-
-            public ExpiringPublisherClient(DateTime createdUtc, Publisher.PublisherClient publisherClient)
-            {
-                CreatedUtc = createdUtc;
-                PublisherClient = publisherClient;
+                PubSub.PublisherClient publisherClient = new PubSub.PublisherClient(credentials, googlePubSubAttribute.ProjectId, googlePubSubAttribute.TopicId);
+                publisherClientV2Cache.AddOrUpdate(key, publisherClient, (newkey, oldValue) => publisherClient);
+                return publisherClient;
             }
 
-            public DateTime CreatedUtc { get; }
-            public Publisher.PublisherClient PublisherClient { get; }
         }
 
     }

@@ -1,6 +1,4 @@
-﻿using Google.Cloud.PubSub.V1;
-using Microsoft.Azure.WebJobs;
-using System;
+﻿using Microsoft.Azure.WebJobs;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -29,22 +27,20 @@ namespace AzureFunctions.Extensions.GooglePubSub {
         Task IAsyncCollector<string>.FlushAsync(CancellationToken cancellationToken) {
 
             if (items.Any()) {
-                Publisher.PublisherClient publisher = PublisherClientCache.GetPublisherClient(googlePubSubAttribute);
 
-                var topicName = new TopicName(googlePubSubAttribute.ProjectId, googlePubSubAttribute.TopicId);
+                PubSub.PublisherClient publisher = PublisherClientCache.GetPublisherClientV2(googlePubSubAttribute);
 
                 var bulkSize = items.Count() / 1000;
-                var bulkTasks = new List<Task>();
-                for (var index = 0; index <= bulkSize; index++) {
-
-                    var pubSubMessages = items.Skip(index * 1000).Take(1000).Select(c => new PubsubMessage() { Data = Google.Protobuf.ByteString.CopyFromUtf8(c) });
-                    var publishRequest = new PublishRequest() { TopicAsTopicName = topicName };
-                    publishRequest.Messages.AddRange(pubSubMessages);
-
-                    bulkTasks.Add(publisher.PublishAsync(publishRequest, null, null, cancellationToken).ResponseAsync);
+                if (bulkSize > 0) {
+                    var bulkTasks = new List<Task>();
+                    for (var index = 0; index <= bulkSize; index++) {
+                        bulkTasks.Add(publisher.PublishAsync(items.Skip(index * 1000).Take(1000), cancellationToken));
+                    }
+                    return Task.WhenAll(bulkTasks);
+                } else {
+                    return publisher.PublishAsync(items, cancellationToken);
                 }
 
-                return Task.WhenAll(bulkTasks);
             }
 
             return Task.CompletedTask;

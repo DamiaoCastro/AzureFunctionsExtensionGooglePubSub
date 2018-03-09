@@ -28,7 +28,7 @@ namespace AzureFunctions.Extensions.GooglePubSub {
 
             var credentials = CreatorService.GetCredentials(triggerAttribute);
             PubSub.SubscriberClient subscriberClient = new PubSub.SubscriberClient(credentials, triggerAttribute.ProjectId, triggerAttribute.SubscriptionId);
-            
+
             await CreateSubscription(subscriberClient, cancellationToken);
 
             var processorCount = Math.Max(2, Environment.ProcessorCount);
@@ -39,17 +39,7 @@ namespace AzureFunctions.Extensions.GooglePubSub {
                     await ListenerPull(subscriberClient, index, cancellationToken);
                 }
             });
-
-            //var listTasks = new List<Task>();
-            //while (!cancellationToken.IsCancellationRequested) {
-            //while (listTasks.Count() < processorCount) {
-            //var item = ListenerPull(credentials, index++, cancellationToken);
-            //listTasks.Add(item);
-            //}
-
-            //await Task.WhenAll(listTasks);
-            //}
-
+            
         }
 
         Task IListener.StopAsync(CancellationToken cancellationToken) {
@@ -57,13 +47,13 @@ namespace AzureFunctions.Extensions.GooglePubSub {
         }
 
         private Task CreateSubscription(PubSub.SubscriberClient subscriberClient, CancellationToken cancellationToken) {
-            
+
             var createSubscriptionRequest = new CreateSubscriptionRequest() {
                 ackDeadlineSeconds = triggerAttribute.AcknowledgeDeadline,
                 name = triggerAttribute.SubscriptionId,
                 topic = $"projects/{triggerAttribute.ProjectId}/topics/{triggerAttribute.TopicId}"
             };
-            
+
             return subscriberClient.CreateAsync(createSubscriptionRequest, cancellationToken);
 
         }

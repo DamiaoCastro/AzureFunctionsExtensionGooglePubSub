@@ -1,6 +1,7 @@
 ﻿using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Net.Http;
 using System.Threading;
@@ -29,13 +30,35 @@ namespace AzureFunctions.Extensions.GooglePubSub.PubSub {
                     HttpResponseMessage post = postTask.Result;
 
                     if (post.IsSuccessStatusCode) {
-                        return post.Content.ReadAsStringAsync()
-                            .ContinueWith((readAsStringTask) => {
-                                string resultString = readAsStringTask.Result;
-                                var publishResponse = JsonConvert.DeserializeObject<PublishResponse>(resultString);
 
-                                return publishResponse.messageIds;
-                            });
+                        if (post.Content.Headers.ContentEncoding.Contains("gzip")) {
+
+                            return post.Content.ReadAsByteArrayAsync()
+                                .ContinueWith((readAsByteArrayTask) => {
+                                    byte[] resultByteArray = readAsByteArrayTask.Result;
+
+                                    var memoryStream = new MemoryStream();
+                                    using (var zipStream = new System.IO.Compression.GZipStream(new MemoryStream(resultByteArray), System.IO.Compression.CompressionMode.Decompress)) {
+                                        zipStream.CopyTo(memoryStream);
+                                    }
+
+                                    var resultString = System.Text.Encoding.UTF8.GetString(memoryStream.ToArray());
+                                    var publishResponse = JsonConvert.DeserializeObject<PublishResponse>(resultString);
+
+                                    return publishResponse?.messageIds;
+                                });
+
+                        } else {
+
+                            return post.Content.ReadAsStringAsync()
+                                .ContinueWith((readAsStringTask) => {
+                                    string resultString = readAsStringTask.Result;
+                                    var publishResponse = JsonConvert.DeserializeObject<PublishResponse>(resultString);
+
+                                    return publishResponse.messageIds;
+                                });
+                        }
+
                     } else {
                         throw new ApplicationException("pubSub publish failed");
                     }

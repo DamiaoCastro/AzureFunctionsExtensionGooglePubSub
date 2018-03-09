@@ -1,5 +1,6 @@
 ﻿using Newtonsoft.Json;
 using System.Collections.Generic;
+using System.IO;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
@@ -55,11 +56,31 @@ namespace AzureFunctions.Extensions.GooglePubSub.PubSub {
                     HttpResponseMessage post = postTask.Result;
 
                     if (post.IsSuccessStatusCode) {
-                        return post.Content.ReadAsStringAsync()
-                            .ContinueWith((readAsStringTask) => {
-                                string resultString = readAsStringTask.Result;
-                                return JsonConvert.DeserializeObject<SubscriberPullResponse>(resultString);
-                            });
+
+                        if (post.Content.Headers.ContentEncoding.Contains("gzip")) {
+
+                            return post.Content.ReadAsByteArrayAsync()
+                                .ContinueWith((readAsByteArrayTask) => {
+                                    byte[] resultByteArray = readAsByteArrayTask.Result;
+
+                                    var memoryStream = new MemoryStream();
+                                    using (var zipStream = new System.IO.Compression.GZipStream(new MemoryStream(resultByteArray), System.IO.Compression.CompressionMode.Decompress)) {
+                                        zipStream.CopyTo(memoryStream);
+                                    }
+
+                                    var resultString = System.Text.Encoding.UTF8.GetString(memoryStream.ToArray());
+                                    var publishResponse = JsonConvert.DeserializeObject<SubscriberPullResponse>(resultString);
+
+                                    return publishResponse;
+                                });
+
+                        } else {
+                            return post.Content.ReadAsStringAsync()
+                                .ContinueWith((readAsStringTask) => {
+                                    string resultString = readAsStringTask.Result;
+                                    return JsonConvert.DeserializeObject<SubscriberPullResponse>(resultString);
+                                });
+                        }
                     }
 
                     return Task.FromResult<SubscriberPullResponse>(null);

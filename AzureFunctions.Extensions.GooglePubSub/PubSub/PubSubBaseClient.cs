@@ -25,7 +25,18 @@ namespace AzureFunctions.Extensions.GooglePubSub.PubSub {
 
             HttpContent content = null;
             if (requestBodyObject != null) {
-                content = new StringContent(JsonConvert.SerializeObject(requestBodyObject), System.Text.Encoding.UTF8, "application/json");
+                //content = new StringContent(JsonConvert.SerializeObject(requestBodyObject), System.Text.Encoding.UTF8, "application/json");
+                
+                byte[] compressedBodyBytes;
+                using (var memoryStream = new System.IO.MemoryStream()) {
+                    var requestBodyObjectBytes = System.Text.Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(requestBodyObject));
+                    using (var zipStream = new System.IO.Compression.GZipStream(memoryStream, System.IO.Compression.CompressionMode.Compress)) {
+                        zipStream.Write(requestBodyObjectBytes, 0, requestBodyObjectBytes.Length);
+                    }
+                    compressedBodyBytes = memoryStream.ToArray();
+                }
+
+                content = new ByteArrayContent(compressedBodyBytes);
             }
 
             var request = new HttpRequestMessage() {
@@ -33,10 +44,12 @@ namespace AzureFunctions.Extensions.GooglePubSub.PubSub {
                 Method = httpMethod,
                 Content = content
             };
-
+            request.Content.Headers.ContentEncoding.Add("gzip");
+            request.Headers.AcceptEncoding.Add(new StringWithQualityHeaderValue("gzip"));
+            
             return _httpClient.SendAsync(request, cancellationToken);
         }
-        
+
         DateTime t1 = DateTime.UtcNow;
         private HttpClient GetHttpClient() {
             if ((DateTime.UtcNow - t1).TotalHours > 1)//get new http client and new credentials every hour

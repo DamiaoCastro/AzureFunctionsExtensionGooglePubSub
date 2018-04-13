@@ -1,3 +1,4 @@
+using System;
 using Microsoft.Azure.WebJobs;
 
 namespace AzureFunctions.Extensions.GooglePubSub.DemoProject2 {
@@ -9,31 +10,31 @@ namespace AzureFunctions.Extensions.GooglePubSub.DemoProject2 {
            [GooglePubSub("MyGooglePubSubConfig2")] ICollector<string> messages
            ) {
 
-            for (int i = 0; i < 1; i++) {
-                messages.Add("I have a new message from PubSubCollector1 xxxx");
-                messages.Add("I have a new message from PubSubCollector1 xxxx");
-                messages.Add("I have a new message from PubSubCollector1 xxxx");
-                messages.Add("I have a new message from PubSubCollector1 xxxx");
-                messages.Add("I have a new message from PubSubCollector1 xxxx");
-                messages.Add("I have a new message from PubSubCollector1 xxxx");
-                messages.Add("I have a new message from PubSubCollector1 xxxx");
-                messages.Add("I have a new message from PubSubCollector1 xxxx");
-                messages.Add("I have a new message from PubSubCollector1 xxxx");
-                messages.Add("I have a new message from PubSubCollector1 xxxx");
-                messages.Add("I have a new message from PubSubCollector1 xxxx");
-                messages.Add("I have a new message from PubSubCollector1 xxxx");
-                messages.Add("I have a new message from PubSubCollector1 xxxx");
-                messages.Add("I have a new message from PubSubCollector1 xxxx");
-                messages.Add("I have a new message from PubSubCollector1 xxxx");
-                messages.Add("I have a new message from PubSubCollector1 xxxx");
-                messages.Add("I have a new message from PubSubCollector1 xxxx");
-                messages.Add("I have a new message from PubSubCollector1 xxxx");
-                messages.Add("I have a new message from PubSubCollector1 xxxx");
-                messages.Add("I have a new message from PubSubCollector1 xxxx");
-                messages.Add("I have a new message from PubSubCollector1 xxxx");
-                messages.Add("I have a new message from PubSubCollector1 xxxx");
-                messages.Add("I have a new message from PubSubCollector1 xxxx");
-                messages.Add("I have a new message from PubSubCollector1 xxxx");
+            for (int i = 0; i < 10; i++) {
+                messages.Add($"I have a new message from PubSubCollector1 {DateTime.Now.ToString("ffffff")}");
+                messages.Add($"I have a new message from PubSubCollector1 {DateTime.Now.ToString("ffffff")}");
+                messages.Add($"I have a new message from PubSubCollector1 {DateTime.Now.ToString("ffffff")}");
+                messages.Add($"I have a new message from PubSubCollector1 {DateTime.Now.ToString("ffffff")}");
+                messages.Add($"I have a new message from PubSubCollector1 {DateTime.Now.ToString("ffffff")}");
+                messages.Add($"I have a new message from PubSubCollector1 {DateTime.Now.ToString("ffffff")}");
+                messages.Add($"I have a new message from PubSubCollector1 {DateTime.Now.ToString("ffffff")}");
+                messages.Add($"I have a new message from PubSubCollector1 {DateTime.Now.ToString("ffffff")}");
+                messages.Add($"I have a new message from PubSubCollector1 {DateTime.Now.ToString("ffffff")}");
+                messages.Add($"I have a new message from PubSubCollector1 {DateTime.Now.ToString("ffffff")}");
+                messages.Add($"I have a new message from PubSubCollector1 {DateTime.Now.ToString("ffffff")}");
+                messages.Add($"I have a new message from PubSubCollector1 {DateTime.Now.ToString("ffffff")}");
+                messages.Add($"I have a new message from PubSubCollector1 {DateTime.Now.ToString("ffffff")}");
+                messages.Add($"I have a new message from PubSubCollector1 {DateTime.Now.ToString("ffffff")}");
+                messages.Add($"I have a new message from PubSubCollector1 {DateTime.Now.ToString("ffffff")}");
+                messages.Add($"I have a new message from PubSubCollector1 {DateTime.Now.ToString("ffffff")}");
+                messages.Add($"I have a new message from PubSubCollector1 {DateTime.Now.ToString("ffffff")}");
+                messages.Add($"I have a new message from PubSubCollector1 {DateTime.Now.ToString("ffffff")}");
+                messages.Add($"I have a new message from PubSubCollector1 {DateTime.Now.ToString("ffffff")}");
+                messages.Add($"I have a new message from PubSubCollector1 {DateTime.Now.ToString("ffffff")}");
+                messages.Add($"I have a new message from PubSubCollector1 {DateTime.Now.ToString("ffffff")}");
+                messages.Add($"I have a new message from PubSubCollector1 {DateTime.Now.ToString("ffffff")}");
+                messages.Add($"I have a new message from PubSubCollector1 {DateTime.Now.ToString("ffffff")}");
+                messages.Add($"I have a new message from PubSubCollector1 {DateTime.Now.ToString("ffffff")}");
             }
 
         }

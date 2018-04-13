@@ -14,7 +14,7 @@
     "MyGooglePubSubConfig2.TopicId": "test1",
     "MyGooglePubSubConfig2.SubscriptionId": "subscriptionId",
     "MyGooglePubSubConfig2.CreateSubscriptionIfDoesntExist": true,
-    "MyGooglePubSubConfig2.MaxBatchSize": 100,
+    "MyGooglePubSubConfig2.MaxBatchSize": 1000,
 
     "MyGooglePubSubConfig3.Credentials": "{ ... }",
     "MyGooglePubSubConfig3.ProjectId": "damiao-1982",

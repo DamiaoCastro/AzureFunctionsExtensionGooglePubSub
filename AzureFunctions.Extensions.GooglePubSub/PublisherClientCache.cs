@@ -3,9 +3,9 @@
 namespace AzureFunctions.Extensions.GooglePubSub {
     public static class PublisherClientCache {
         
-        private static ConcurrentDictionary<int, PubSub.PublisherClient> publisherClientV2Cache = new ConcurrentDictionary<int, PubSub.PublisherClient>();
+        private static ConcurrentDictionary<int, TransparentApiClient.Google.PubSub.V1.Resources.Topics> publisherClientV2Cache = new ConcurrentDictionary<int, TransparentApiClient.Google.PubSub.V1.Resources.Topics>();
 
-        internal static PubSub.PublisherClient GetPublisherClientV2(GooglePubSubAttribute googlePubSubAttribute) {
+        internal static TransparentApiClient.Google.PubSub.V1.Resources.Topics GetTopicsClient(GooglePubSubAttribute googlePubSubAttribute) {
 
             var key = googlePubSubAttribute.GetHashCode();
 
@@ -13,8 +13,7 @@ namespace AzureFunctions.Extensions.GooglePubSub {
                 return publisherClientV2Cache[key];
             } else {
                 var credentials = CreatorService.GetCredentials(googlePubSubAttribute);
-
-                PubSub.PublisherClient publisherClient = new PubSub.PublisherClient(credentials, googlePubSubAttribute.ProjectId, googlePubSubAttribute.TopicId);
+                var publisherClient = new TransparentApiClient.Google.PubSub.V1.Resources.Topics(credentials);
                 publisherClientV2Cache.AddOrUpdate(key, publisherClient, (newkey, oldValue) => publisherClient);
                 return publisherClient;
             }

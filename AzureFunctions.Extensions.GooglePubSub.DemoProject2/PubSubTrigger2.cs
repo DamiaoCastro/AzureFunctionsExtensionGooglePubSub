@@ -1,8 +1,6 @@
 using Microsoft.Azure.WebJobs;
 using Microsoft.Azure.WebJobs.Host;
-using Microsoft.WindowsAzure.Storage.Queue;
 using System.Collections.Generic;
-using System.Threading.Tasks;
 
 namespace AzureFunctions.Extensions.GooglePubSub.DemoProject2 {
 

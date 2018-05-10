@@ -3,6 +3,8 @@
   "Values": {
     "AzureWebJobsStorage": "UseDevelopmentStorage=true",
 
+    "FUNCTIONS_EXTENSION_VERSION": "beta",
+
     "MyGooglePubSubConfig1.ProjectId": "damiao-1982",
     "MyGooglePubSubConfig1.TopicId": "test1",
     "MyGooglePubSubConfig1.SubscriptionId": "subscriptionId",

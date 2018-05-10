@@ -29,8 +29,8 @@ namespace AzureFunctions.Extensions.GooglePubSub {
         async Task IListener.StartAsync(CancellationToken cancellationToken) {
 
             var credentials = CreatorService.GetCredentials(triggerAttribute);
-            var topicsClient = new TransparentApiClient.Google.PubSub.V1.Resources.Topics(credentials);
-            var subscriptionsClient = new TransparentApiClient.Google.PubSub.V1.Resources.Subscriptions(credentials);
+            var topicsClient = new Topics(credentials);
+            var subscriptionsClient = new Subscriptions(credentials);
 
             if (triggerAttribute.CreateSubscriptionIfDoesntExist) {
                 await CreateSubscription(topicsClient, triggerAttribute, cancellationToken);
@@ -47,7 +47,7 @@ namespace AzureFunctions.Extensions.GooglePubSub {
             return Task.FromResult(true);
         }
 
-        private Task CreateSubscription(TransparentApiClient.Google.PubSub.V1.Resources.Topics topicsClient, GooglePubSubTriggerAttribute triggerAttribute, CancellationToken cancellationToken) {
+        private Task CreateSubscription(Topics topicsClient, GooglePubSubTriggerAttribute triggerAttribute, CancellationToken cancellationToken) {
 
             var topicName = $"projects/{triggerAttribute.ProjectId}/topics/{triggerAttribute.TopicId}";
 
@@ -62,32 +62,33 @@ namespace AzureFunctions.Extensions.GooglePubSub {
 
         }
 
-        private Task ListenerPull(TransparentApiClient.Google.PubSub.V1.Resources.Topics topicsClient, TransparentApiClient.Google.PubSub.V1.Resources.Subscriptions subscriptionsClient, int index, CancellationToken cancellationToken) {
+        private Task ListenerPull(Topics topicsClient, Subscriptions subscriptionsClient, int index, CancellationToken cancellationToken) {
 
             return GetTypeInput(subscriptionsClient, cancellationToken)
                 .ContinueWith((typeInputTask) => {
+
+                    if (typeInputTask.IsFaulted) {
+                        throw typeInputTask.Exception;
+                    }
+
                     (TriggeredFunctionData, IEnumerable<string>) buckets = typeInputTask.Result;
                     var (input, ackIds) = buckets;
 
-                    {
-                        if (input != null && ackIds != null && ackIds.Any()) {
+                    if (input != null && ackIds != null && ackIds.Any()) {
 
-                            //System.Diagnostics.Debug.WriteLine($"{DateTime.Now:HH:mm:ss:fff} - {index} - received {ackIds.Count()} messages");
+                        var t = executor.TryExecuteAsync(input, cancellationToken)
+                                .ContinueWith((functionResultTask) => {
 
-                            var t = executor.TryExecuteAsync(input, cancellationToken)
-                                    .ContinueWith((functionResultTask) => {
+                                    FunctionResult functionResult = functionResultTask.Result;
+                                    if (functionResult.Succeeded) {
+                                        return AcknowledgeAsync(subscriptionsClient, ackIds, cancellationToken);
+                                    }
 
-                                        FunctionResult functionResult = functionResultTask.Result;
-                                        if (functionResult.Succeeded) {
-                                            return AcknowledgeAsync(subscriptionsClient, ackIds, cancellationToken);
-                                        }
+                                    return Task.CompletedTask;
 
-                                        return Task.CompletedTask;
+                                }, cancellationToken).Unwrap();
 
-                                    }, cancellationToken).Unwrap();
-
-                            return t;
-                        }
+                        return t;
                     }
 
                     return Task.CompletedTask;
@@ -109,7 +110,7 @@ namespace AzureFunctions.Extensions.GooglePubSub {
         private Task<(TriggeredFunctionData messages, IEnumerable<string> ackIds)> GetTypeInput(Subscriptions subscriptionsClient, CancellationToken cancellationToken) {
 
             return subscriptionsClient.PullAsync($"projects/{triggerAttribute.ProjectId}/subscriptions/{triggerAttribute.SubscriptionId}",
-                    new TransparentApiClient.Google.PubSub.V1.Schema.PullRequest() {
+                    new PullRequest() {
                         maxMessages = triggerAttribute.MaxBatchSize,
                         returnImmediately = false
                     },
@@ -125,7 +126,6 @@ namespace AzureFunctions.Extensions.GooglePubSub {
 
             if (pull != null && pull.Success && pull.Response.receivedMessages != null && pull.Response.receivedMessages.Count() > 0) {
 
-                //var list = new List<(TriggeredFunctionData messages, IEnumerable<string> ackIds)>();
                 IEnumerable<string> messages = pull.Response.receivedMessages.Select(c => System.Text.Encoding.UTF8.GetString(Convert.FromBase64String(c.message.data)));
                 IEnumerable<string> ackIds = pull.Response.receivedMessages.Select(c => c.ackId);
 

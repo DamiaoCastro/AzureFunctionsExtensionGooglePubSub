@@ -7,7 +7,13 @@ using System.Threading.Tasks;
 namespace AzureFunctions.Extensions.GooglePubSub {
 
     internal class TriggerBindingProvider : ITriggerBindingProvider {
-        
+        private readonly Microsoft.Extensions.Logging.ILogger logger;
+
+        public TriggerBindingProvider(Microsoft.Extensions.Logging.ILogger logger)
+        {
+            this.logger = logger;
+        }
+
         public Task<ITriggerBinding> TryCreateAsync(TriggerBindingProviderContext context) {
             if (context == null) {
                 throw new ArgumentNullException(nameof(context));
@@ -27,7 +33,7 @@ namespace AzureFunctions.Extensions.GooglePubSub {
 
             }
             
-            return Task.FromResult<ITriggerBinding>(new TriggerBinding(attribute, context.Parameter));
+            return Task.FromResult<ITriggerBinding>(new TriggerBinding(attribute, context.Parameter, logger));
 
         }
 

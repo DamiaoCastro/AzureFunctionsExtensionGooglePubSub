@@ -10,10 +10,12 @@ namespace AzureFunctions.Extensions.GooglePubSub {
     internal class AsyncCollector : ICollector<string>, IAsyncCollector<string> {
 
         private readonly GooglePubSubAttribute googlePubSubAttribute;
+        private readonly Microsoft.Extensions.Logging.ILogger logger;
         private List<string> items = new List<string>();
 
-        public AsyncCollector(GooglePubSubAttribute googlePubSubAttribute) {
+        public AsyncCollector(GooglePubSubAttribute googlePubSubAttribute, Microsoft.Extensions.Logging.ILogger logger) {
             this.googlePubSubAttribute = GooglePubSubAttribute.GetAttributeByConfiguration(googlePubSubAttribute);
+            this.logger = logger;
         }
 
         void ICollector<string>.Add(string item) {

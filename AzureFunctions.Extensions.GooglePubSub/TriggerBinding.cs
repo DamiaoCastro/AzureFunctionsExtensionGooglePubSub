@@ -13,11 +13,13 @@ namespace AzureFunctions.Extensions.GooglePubSub {
 
         private readonly GooglePubSubTriggerAttribute googlePubSubTriggerAttribute;
         private ParameterInfo parameter;
+        private readonly Microsoft.Extensions.Logging.ILogger logger;
         private IReadOnlyDictionary<string, Type> bindingContract;
 
-        public TriggerBinding(GooglePubSubTriggerAttribute googlePubSubTriggerAttribute, ParameterInfo parameter) {
+        public TriggerBinding(GooglePubSubTriggerAttribute googlePubSubTriggerAttribute, ParameterInfo parameter, Microsoft.Extensions.Logging.ILogger logger) {
             this.googlePubSubTriggerAttribute = googlePubSubTriggerAttribute;
             this.parameter = parameter;
+            this.logger = logger;
             bindingContract = CreateBindingDataContract();
         }
 
@@ -35,7 +37,7 @@ namespace AzureFunctions.Extensions.GooglePubSub {
         }
 
         Task<IListener> ITriggerBinding.CreateListenerAsync(ListenerFactoryContext context) {
-            return Task.FromResult<IListener>(new Listener(context.Executor, googlePubSubTriggerAttribute));
+            return Task.FromResult<IListener>(new Listener(context.Executor, googlePubSubTriggerAttribute, logger));
         }
 
         ParameterDescriptor ITriggerBinding.ToParameterDescriptor() {

@@ -11,10 +11,12 @@ namespace AzureFunctions.Extensions.GooglePubSub {
                 throw new ArgumentNullException(nameof(context));
             }
 
-            context.AddBindingRule<GooglePubSubAttribute>()
-                .BindToCollector(c => new AsyncCollector(c));
+            Microsoft.Extensions.Logging.ILogger logger = context.Config.LoggerFactory.CreateLogger("GooglePubSubExtension");
 
-            context.Config.RegisterBindingExtensions(new TriggerBindingProvider());
+            context.AddBindingRule<GooglePubSubAttribute>()
+                .BindToCollector(c => new AsyncCollector(c, logger));
+
+            context.Config.RegisterBindingExtensions(new TriggerBindingProvider(logger));
             
         }
     }

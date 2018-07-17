@@ -120,8 +120,12 @@ namespace AzureFunctions.Extensions.GooglePubSub
                     IEnumerable<(TriggeredFunctionData messages, IEnumerable<string> ackIds)> buckets = typeInputTask.Result;
                     foreach ((TriggeredFunctionData input, IEnumerable<string> ackIds) in buckets)
                     {
+
+                        int bucketIndex = 0;
                         if (input != null && ackIds != null && ackIds.Any())
                         {
+
+                            logger.LogInformation($"Fetch {ackIds.Count()} items for bucket #{++bucketIndex}");
 
                             var t = executor.TryExecuteAsync(input, cancellationToken)
                                     .ContinueWith((functionResultTask) =>

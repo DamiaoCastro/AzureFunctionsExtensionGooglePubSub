@@ -17,13 +17,13 @@ namespace AzureFunctions.Extensions.GooglePubSub
             }
             
             ILogger logger = context.Config.LoggerFactory.CreateLogger("GooglePubSubExtension");
-            logger.LogDebug("GooglePubSubExtension start logger");
-
+            
             context.AddBindingRule<GooglePubSubAttribute>()
                 .BindToCollector(c => new AsyncCollector(c, logger));
 
             context.Config.RegisterBindingExtensions(new TriggerBindingProvider(logger));
 
         }
+        
     }
 }

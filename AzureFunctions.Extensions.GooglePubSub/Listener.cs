@@ -8,50 +8,90 @@ using System.Collections.Generic;
 using TransparentApiClient.Google.Core;
 using TransparentApiClient.Google.PubSub.V1.Schema;
 using TransparentApiClient.Google.PubSub.V1.Resources;
+using Microsoft.Extensions.Logging;
 
-namespace AzureFunctions.Extensions.GooglePubSub {
-    internal class Listener : IListener {
+namespace AzureFunctions.Extensions.GooglePubSub
+{
+    internal class Listener : IListener
+    {
 
         private ITriggeredFunctionExecutor executor;
+        private readonly Microsoft.Extensions.Logging.ILogger logger;
         private readonly GooglePubSubTriggerAttribute triggerAttribute;
 
-        public Listener(ITriggeredFunctionExecutor executor, GooglePubSubTriggerAttribute triggerAttribute) {
+        private const int NumberOfMessageBlocks = 10;
+
+        public Listener(ITriggeredFunctionExecutor executor, GooglePubSubTriggerAttribute triggerAttribute, Microsoft.Extensions.Logging.ILogger logger)
+        {
             this.executor = executor;
+            this.logger = logger;
             this.triggerAttribute = GooglePubSubTriggerAttribute.GetAttributeByConfiguration(triggerAttribute);
         }
 
-        void IListener.Cancel() {
+        void IListener.Cancel()
+        {
         }
 
-        public void Dispose() {
+        public void Dispose()
+        {
         }
 
-        async Task IListener.StartAsync(CancellationToken cancellationToken) {
+        async Task IListener.StartAsync(CancellationToken cancellationToken)
+        {
 
-            var credentials = CreatorService.GetCredentials(triggerAttribute);
-            var topicsClient = new Topics(credentials);
-            var subscriptionsClient = new Subscriptions(credentials);
+            retry:
 
-            if (triggerAttribute.CreateSubscriptionIfDoesntExist) {
-                await CreateSubscription(topicsClient, triggerAttribute, cancellationToken);
+            using (var scope = logger.BeginScope("IListener"))
+            {
+
+                var eventId = new Microsoft.Extensions.Logging.EventId(1);
+                logger.LogInformation("StartAsync");
+
+                try
+                {
+
+                    var credentials = CreatorService.GetCredentials(triggerAttribute);
+                    var topicsClient = new Topics(credentials);
+                    var subscriptionsClient = new Subscriptions(credentials);
+
+                    if (triggerAttribute.CreateSubscriptionIfDoesntExist)
+                    {
+                        await CreateSubscription(topicsClient, triggerAttribute, cancellationToken);
+                        logger.LogInformation("CreateSubscriptionIfDoesntExist");
+                    }
+
+                    var index = 0;
+                    while (!cancellationToken.IsCancellationRequested)
+                    {
+                        await ListenerPull(topicsClient, subscriptionsClient, ++index, cancellationToken);
+                        logger.LogInformation("ListenerPull");
+                    }
+
+                }
+                catch (Exception ex)
+                {
+                    logger.LogError(ex, ex.Message);
+                }
+
             }
 
-            var index = 0;
-            while (!cancellationToken.IsCancellationRequested) {
-                await ListenerPull(topicsClient, subscriptionsClient, index, cancellationToken);
-            }
+            System.Threading.Thread.Sleep(30 * 1000);
+            goto retry;
 
         }
 
-        Task IListener.StopAsync(CancellationToken cancellationToken) {
+        Task IListener.StopAsync(CancellationToken cancellationToken)
+        {
             return Task.FromResult(true);
         }
 
-        private Task CreateSubscription(Topics topicsClient, GooglePubSubTriggerAttribute triggerAttribute, CancellationToken cancellationToken) {
+        private Task CreateSubscription(Topics topicsClient, GooglePubSubTriggerAttribute triggerAttribute, CancellationToken cancellationToken)
+        {
 
             var topicName = $"projects/{triggerAttribute.ProjectId}/topics/{triggerAttribute.TopicId}";
 
-            var topic = new TransparentApiClient.Google.PubSub.V1.Schema.Topic() {
+            var topic = new TransparentApiClient.Google.PubSub.V1.Schema.Topic()
+            {
                 name = topicName
                 //ackDeadlineSeconds= triggerAttribute.AcknowledgeDeadline,
                 //name = triggerAttribute.SubscriptionId,
@@ -62,33 +102,58 @@ namespace AzureFunctions.Extensions.GooglePubSub {
 
         }
 
-        private Task ListenerPull(Topics topicsClient, Subscriptions subscriptionsClient, int index, CancellationToken cancellationToken) {
+        private Task ListenerPull(Topics topicsClient, Subscriptions subscriptionsClient, int index, CancellationToken cancellationToken)
+        {
+
+            var logScope = logger.BeginScope(Guid.NewGuid());
 
             return GetTypeInput(subscriptionsClient, cancellationToken)
-                .ContinueWith((typeInputTask) => {
+                .ContinueWith((typeInputTask) =>
+                {
 
-                    if (typeInputTask.IsFaulted) {
+                    if (typeInputTask.IsFaulted)
+                    {
+                        logger.Log(Microsoft.Extensions.Logging.LogLevel.Error, new Microsoft.Extensions.Logging.EventId(index, "ListenerPull"), logScope, typeInputTask.Exception, null);
                         throw typeInputTask.Exception;
                     }
 
-                    (TriggeredFunctionData, IEnumerable<string>) buckets = typeInputTask.Result;
-                    var (input, ackIds) = buckets;
+                    IEnumerable<(TriggeredFunctionData messages, IEnumerable<string> ackIds)> buckets = typeInputTask.Result;
+                    foreach ((TriggeredFunctionData input, IEnumerable<string> ackIds) in buckets)
+                    {
 
-                    if (input != null && ackIds != null && ackIds.Any()) {
+                        int bucketIndex = 0;
+                        if (input != null && ackIds != null && ackIds.Any())
+                        {
 
-                        var t = executor.TryExecuteAsync(input, cancellationToken)
-                                .ContinueWith((functionResultTask) => {
+                            logger.LogInformation($"Fetch {ackIds.Count()} items for bucket #{++bucketIndex}");
 
-                                    FunctionResult functionResult = functionResultTask.Result;
-                                    if (functionResult.Succeeded) {
-                                        return AcknowledgeAsync(subscriptionsClient, ackIds, cancellationToken);
-                                    }
+                            var t = executor.TryExecuteAsync(input, cancellationToken)
+                                    .ContinueWith((functionResultTask) =>
+                                    {
 
-                                    return Task.CompletedTask;
+                                        if (functionResultTask.IsFaulted)
+                                        {
+                                            logger.Log(Microsoft.Extensions.Logging.LogLevel.Error, new Microsoft.Extensions.Logging.EventId(index, "TryExecuteAsync"), logScope, functionResultTask.Exception, null);
+                                        }
+                                        else
+                                        {
+                                            FunctionResult functionResult = functionResultTask.Result;
+                                            if (functionResult.Succeeded)
+                                            {
+                                                return AcknowledgeAsync(subscriptionsClient, ackIds, cancellationToken);
+                                            }
+                                            else
+                                            {
+                                                logger.Log(Microsoft.Extensions.Logging.LogLevel.Error, new Microsoft.Extensions.Logging.EventId(index, "TryExecuteAsync"), logScope, functionResult.Exception, null);
+                                            }
+                                        }
 
-                                }, cancellationToken).Unwrap();
+                                        return Task.CompletedTask;
 
-                        return t;
+                                    }, cancellationToken).Unwrap();
+
+                            return t;
+                        }
                     }
 
                     return Task.CompletedTask;
@@ -97,21 +162,27 @@ namespace AzureFunctions.Extensions.GooglePubSub {
 
         }
 
-        private Task AcknowledgeAsync(Subscriptions subscriptionsClient, IEnumerable<string> ackIds, CancellationToken cancellationToken) {
+        private Task AcknowledgeAsync(Subscriptions subscriptionsClient, IEnumerable<string> ackIds, CancellationToken cancellationToken)
+        {
 
             return subscriptionsClient.AcknowledgeAsync($"projects/{triggerAttribute.ProjectId}/subscriptions/{triggerAttribute.SubscriptionId}",
-                new AcknowledgeRequest() {
+                new AcknowledgeRequest()
+                {
                     ackIds = ackIds
                 },
                 null, cancellationToken);
 
         }
 
-        private Task<(TriggeredFunctionData messages, IEnumerable<string> ackIds)> GetTypeInput(Subscriptions subscriptionsClient, CancellationToken cancellationToken) {
+        private Task<IEnumerable<(TriggeredFunctionData messages, IEnumerable<string> ackIds)>> GetTypeInput(Subscriptions subscriptionsClient, CancellationToken cancellationToken)
+        {
+
+            var maxMessages = triggerAttribute.MaxBatchSize * NumberOfMessageBlocks;
 
             return subscriptionsClient.PullAsync($"projects/{triggerAttribute.ProjectId}/subscriptions/{triggerAttribute.SubscriptionId}",
-                    new PullRequest() {
-                        maxMessages = triggerAttribute.MaxBatchSize,
+                    new PullRequest()
+                    {
+                        maxMessages = maxMessages,
                         returnImmediately = false
                     },
                     null,
@@ -120,27 +191,38 @@ namespace AzureFunctions.Extensions.GooglePubSub {
 
         }
 
-        private (TriggeredFunctionData messages, IEnumerable<string> ackIds) getMessages(Task<BaseResponse<PullResponse>> pullTask) {
+        private IEnumerable<(TriggeredFunctionData messages, IEnumerable<string> ackIds)> getMessages(Task<BaseResponse<PullResponse>> pullTask)
+        {
 
             var pull = pullTask.Result;
 
-            if (pull != null && pull.Success && pull.Response.receivedMessages != null && pull.Response.receivedMessages.Count() > 0) {
+            if (pull != null && pull.Success && pull.Response.receivedMessages != null && pull.Response.receivedMessages.Count() > 0)
+            {
 
-                IEnumerable<string> messages = pull.Response.receivedMessages.Select(c => System.Text.Encoding.UTF8.GetString(Convert.FromBase64String(c.message.data)));
-                IEnumerable<string> ackIds = pull.Response.receivedMessages.Select(c => c.ackId);
+                for (int i = 0; i < NumberOfMessageBlocks; i++)
+                {
 
-                TriggeredFunctionData input = new TriggeredFunctionData {
-                    TriggerValue = messages
-                };
+                    var messagesBlock = pull.Response.receivedMessages.Skip(i * triggerAttribute.MaxBatchSize).Take(triggerAttribute.MaxBatchSize);
 
-                return (input, ackIds);
-            } else {
-                if (pull != null && (!pull.Success)) {
+                    IEnumerable<string> messages = messagesBlock.Select(c => System.Text.Encoding.UTF8.GetString(Convert.FromBase64String(c.message.data)));
+                    IEnumerable<string> ackIds = messagesBlock.Select(c => c.ackId);
+
+                    TriggeredFunctionData input = new TriggeredFunctionData
+                    {
+                        TriggerValue = messages
+                    };
+
+                    yield return (input, ackIds);
+                }
+            }
+            else
+            {
+                if (pull != null && (!pull.Success))
+                {
                     throw new Exception(pull.ErrorText);
                 }
             }
 
-            return (null, null);
         }
 
     }

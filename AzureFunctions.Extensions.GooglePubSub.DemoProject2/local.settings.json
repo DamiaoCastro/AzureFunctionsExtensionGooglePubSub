@@ -4,7 +4,9 @@
     "AzureWebJobsStorage": "UseDevelopmentStorage=true",
 
     "FUNCTIONS_EXTENSION_VERSION": "beta",
+    "FUNCTIONS_WORKER_RUNTIME": "dotnet",
 
+    "MyGooglePubSubConfig1.CredentialsFileName": "credentials.json",
     "MyGooglePubSubConfig1.ProjectId": "damiao-1982",
     "MyGooglePubSubConfig1.TopicId": "test1",
     "MyGooglePubSubConfig1.SubscriptionId": "subscriptionId",
@@ -16,7 +18,8 @@
     "MyGooglePubSubConfig2.TopicId": "test1",
     "MyGooglePubSubConfig2.SubscriptionId": "subscriptionId",
     "MyGooglePubSubConfig2.CreateSubscriptionIfDoesntExist": true,
-    "MyGooglePubSubConfig2.MaxBatchSize": 1000,
+    "MyGooglePubSubConfig2.MaxBatchSize": 10,
+    "MyGooglePubSubConfig2.NrListeners": 6,
 
     "MyGooglePubSubConfig3.Credentials": "{ ... }",
     "MyGooglePubSubConfig3.ProjectId": "damiao-1982",

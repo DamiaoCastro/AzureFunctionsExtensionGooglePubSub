@@ -51,21 +51,9 @@ namespace AzureFunctions.Extensions.GooglePubSub
                 {
 
                     var credentials = CreatorService.GetCredentials(triggerAttribute);
-                    var topicsClient = new Topics(credentials);
-                    var subscriptionsClient = new Subscriptions(credentials);
+                    var tasks = Enumerable.Range(1, triggerAttribute.NrListeners).Select(c => StartListener(credentials, cancellationToken));
 
-                    if (triggerAttribute.CreateSubscriptionIfDoesntExist)
-                    {
-                        await CreateSubscription(topicsClient, triggerAttribute, cancellationToken);
-                        logger.LogInformation("CreateSubscriptionIfDoesntExist");
-                    }
-
-                    var index = 0;
-                    while (!cancellationToken.IsCancellationRequested)
-                    {
-                        await ListenerPull(topicsClient, subscriptionsClient, ++index, cancellationToken);
-                        logger.LogInformation("ListenerPull");
-                    }
+                    await Task.WhenAll(tasks);
 
                 }
                 catch (Exception ex)
@@ -78,6 +66,27 @@ namespace AzureFunctions.Extensions.GooglePubSub
             System.Threading.Thread.Sleep(30 * 1000);
             goto retry;
 
+        }
+
+        private async Task<CancellationToken> StartListener(byte[] credentials, CancellationToken cancellationToken)
+        {
+            var topicsClient = new Topics(credentials);
+            var subscriptionsClient = new Subscriptions(credentials);
+
+            if (triggerAttribute.CreateSubscriptionIfDoesntExist)
+            {
+                await CreateSubscription(topicsClient, triggerAttribute, cancellationToken);
+                logger.LogInformation("CreateSubscriptionIfDoesntExist");
+            }
+
+            var index = 0;
+            while (!cancellationToken.IsCancellationRequested)
+            {
+                await ListenerPull(topicsClient, subscriptionsClient, ++index, cancellationToken);
+                logger.LogInformation("ListenerPull");
+            }
+
+            return cancellationToken;
         }
 
         Task IListener.StopAsync(CancellationToken cancellationToken)
@@ -102,64 +111,60 @@ namespace AzureFunctions.Extensions.GooglePubSub
 
         }
 
-        private Task ListenerPull(Topics topicsClient, Subscriptions subscriptionsClient, int index, CancellationToken cancellationToken)
+        private async Task ListenerPull(Topics topicsClient, Subscriptions subscriptionsClient, int index, CancellationToken cancellationToken)
         {
 
             var logScope = logger.BeginScope(Guid.NewGuid());
 
-            return GetTypeInput(subscriptionsClient, cancellationToken)
-                .ContinueWith((typeInputTask) =>
-                {
+            var typeInput = await GetTypeInput(subscriptionsClient, cancellationToken);
 
-                    if (typeInputTask.IsFaulted)
-                    {
-                        logger.Log(Microsoft.Extensions.Logging.LogLevel.Error, new Microsoft.Extensions.Logging.EventId(index, "ListenerPull"), logScope, typeInputTask.Exception, null);
-                        throw typeInputTask.Exception;
-                    }
+            var tasks = from c in typeInput
+                        let messages = c.messages
+                        let ackIds = c.ackIds
+                        select ExecuteMessages(subscriptionsClient, index, messages, ackIds, logScope, cancellationToken);
 
-                    IEnumerable<(TriggeredFunctionData messages, IEnumerable<string> ackIds)> buckets = typeInputTask.Result;
-                    foreach ((TriggeredFunctionData input, IEnumerable<string> ackIds) in buckets)
-                    {
+            await Task.WhenAll(tasks);
 
-                        int bucketIndex = 0;
-                        if (input != null && ackIds != null && ackIds.Any())
+        }
+
+        private Task ExecuteMessages(Subscriptions subscriptionsClient, int index, TriggeredFunctionData messages, IEnumerable<string> ackIds, IDisposable logScope, CancellationToken cancellationToken)
+        {
+
+            int bucketIndex = 0;
+            if (messages != null && ackIds != null && ackIds.Any())
+            {
+
+                logger.LogInformation($"Fetch {ackIds.Count()} items for bucket #{++bucketIndex}");
+
+                var t = executor.TryExecuteAsync(messages, cancellationToken)
+                        .ContinueWith((functionResultTask) =>
                         {
 
-                            logger.LogInformation($"Fetch {ackIds.Count()} items for bucket #{++bucketIndex}");
+                            if (functionResultTask.IsFaulted)
+                            {
+                                logger.Log(Microsoft.Extensions.Logging.LogLevel.Error, new Microsoft.Extensions.Logging.EventId(index, "TryExecuteAsync"), logScope, functionResultTask.Exception, null);
+                            }
+                            else
+                            {
+                                FunctionResult functionResult = functionResultTask.Result;
+                                if (functionResult.Succeeded)
+                                {
+                                    return AcknowledgeAsync(subscriptionsClient, ackIds, cancellationToken);
+                                }
+                                else
+                                {
+                                    logger.Log(Microsoft.Extensions.Logging.LogLevel.Error, new Microsoft.Extensions.Logging.EventId(index, "TryExecuteAsync"), logScope, functionResult.Exception, null);
+                                }
+                            }
 
-                            var t = executor.TryExecuteAsync(input, cancellationToken)
-                                    .ContinueWith((functionResultTask) =>
-                                    {
+                            return Task.CompletedTask;
 
-                                        if (functionResultTask.IsFaulted)
-                                        {
-                                            logger.Log(Microsoft.Extensions.Logging.LogLevel.Error, new Microsoft.Extensions.Logging.EventId(index, "TryExecuteAsync"), logScope, functionResultTask.Exception, null);
-                                        }
-                                        else
-                                        {
-                                            FunctionResult functionResult = functionResultTask.Result;
-                                            if (functionResult.Succeeded)
-                                            {
-                                                return AcknowledgeAsync(subscriptionsClient, ackIds, cancellationToken);
-                                            }
-                                            else
-                                            {
-                                                logger.Log(Microsoft.Extensions.Logging.LogLevel.Error, new Microsoft.Extensions.Logging.EventId(index, "TryExecuteAsync"), logScope, functionResult.Exception, null);
-                                            }
-                                        }
+                        }, cancellationToken).Unwrap();
 
-                                        return Task.CompletedTask;
+                return t;
+            }
 
-                                    }, cancellationToken).Unwrap();
-
-                            return t;
-                        }
-                    }
-
-                    return Task.CompletedTask;
-
-                }).Unwrap();
-
+            return Task.CompletedTask;
         }
 
         private Task AcknowledgeAsync(Subscriptions subscriptionsClient, IEnumerable<string> ackIds, CancellationToken cancellationToken)

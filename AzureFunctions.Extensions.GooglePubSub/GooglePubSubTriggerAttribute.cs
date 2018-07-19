@@ -1,11 +1,13 @@
 ﻿using Microsoft.Azure.WebJobs.Description;
 using System;
 
-namespace AzureFunctions.Extensions.GooglePubSub {
+namespace AzureFunctions.Extensions.GooglePubSub
+{
 
     [Binding]
     [AttributeUsage(AttributeTargets.Parameter, AllowMultiple = false)]
-    public class GooglePubSubTriggerAttribute : Attribute {
+    public class GooglePubSubTriggerAttribute : Attribute
+    {
 
         /// <summary>
         /// Attribute to read from Google PubSub. Works with type 'IEnumerable<string>' and 'string[]'
@@ -17,7 +19,8 @@ namespace AzureFunctions.Extensions.GooglePubSub {
         /// <param name="projectId">projectId inside google cloud</param>
         /// <param name="topicId">PubSub topicId to read from</param>
         /// <param name="subscriptionId">subscriptionId to use</param>
-        public GooglePubSubTriggerAttribute(string credentialsFileName, string projectId, string topicId, string subscriptionId) {
+        public GooglePubSubTriggerAttribute(string credentialsFileName, string projectId, string topicId, string subscriptionId)
+        {
             if (string.IsNullOrWhiteSpace(projectId)) { throw new ArgumentNullException(nameof(projectId)); }
             if (string.IsNullOrWhiteSpace(topicId)) { throw new ArgumentNullException(nameof(topicId)); }
             if (string.IsNullOrWhiteSpace(subscriptionId)) { throw new ArgumentNullException(nameof(subscriptionId)); }
@@ -28,7 +31,8 @@ namespace AzureFunctions.Extensions.GooglePubSub {
             SubscriptionId = subscriptionId;
         }
 
-        internal GooglePubSubTriggerAttribute(byte[] credentials, string projectId, string topicId, string subscriptionId) {
+        internal GooglePubSubTriggerAttribute(byte[] credentials, string projectId, string topicId, string subscriptionId)
+        {
             if (string.IsNullOrWhiteSpace(projectId)) { throw new ArgumentNullException(nameof(projectId)); }
             if (string.IsNullOrWhiteSpace(topicId)) { throw new ArgumentNullException(nameof(topicId)); }
             if (string.IsNullOrWhiteSpace(subscriptionId)) { throw new ArgumentNullException(nameof(subscriptionId)); }
@@ -39,7 +43,8 @@ namespace AzureFunctions.Extensions.GooglePubSub {
             SubscriptionId = subscriptionId;
         }
 
-        internal GooglePubSubTriggerAttribute(string projectId, string topicId, string subscriptionId) {
+        internal GooglePubSubTriggerAttribute(string projectId, string topicId, string subscriptionId)
+        {
             if (string.IsNullOrWhiteSpace(projectId)) { throw new ArgumentNullException(nameof(projectId)); }
             if (string.IsNullOrWhiteSpace(topicId)) { throw new ArgumentNullException(nameof(topicId)); }
             if (string.IsNullOrWhiteSpace(subscriptionId)) { throw new ArgumentNullException(nameof(subscriptionId)); }
@@ -60,7 +65,8 @@ namespace AzureFunctions.Extensions.GooglePubSub {
         /// 'your configuration node name'.MaxBatchSize -> max number of messages to receive
         /// </summary>
         /// <param name="configurationNodeName">prefix name that you gave to your configuration.</param>
-        public GooglePubSubTriggerAttribute(string configurationNodeName) {
+        public GooglePubSubTriggerAttribute(string configurationNodeName)
+        {
             if (string.IsNullOrWhiteSpace(configurationNodeName)) { throw new ArgumentNullException(nameof(configurationNodeName)); }
 
             ConfigurationNodeName = configurationNodeName;
@@ -87,7 +93,13 @@ namespace AzureFunctions.Extensions.GooglePubSub {
 
         public int AcknowledgeDeadline { get; set; } = 600;
 
-        internal static GooglePubSubTriggerAttribute GetAttributeByConfiguration(GooglePubSubTriggerAttribute googlePubSubTriggerAttribute) {
+        /// <summary>
+        /// Number of parallel listeners that should be created for the trigger.
+        /// </summary>
+        public int NrListeners { get; internal set; } = 1;
+
+        internal static GooglePubSubTriggerAttribute GetAttributeByConfiguration(GooglePubSubTriggerAttribute googlePubSubTriggerAttribute)
+        {
             if (string.IsNullOrWhiteSpace(googlePubSubTriggerAttribute.ConfigurationNodeName)) { return googlePubSubTriggerAttribute; }
 
             var credentialsString = Environment.GetEnvironmentVariable($"{googlePubSubTriggerAttribute.ConfigurationNodeName}.{nameof(Credentials)}", EnvironmentVariableTarget.Process);
@@ -97,12 +109,18 @@ namespace AzureFunctions.Extensions.GooglePubSub {
             var subscriptionId = Environment.GetEnvironmentVariable($"{googlePubSubTriggerAttribute.ConfigurationNodeName}.{nameof(SubscriptionId)}", EnvironmentVariableTarget.Process);
 
             GooglePubSubTriggerAttribute newGooglePubSubTriggerAttribute = null;
-            if (string.IsNullOrWhiteSpace(credentialsString) && string.IsNullOrEmpty(credentialsFileName)) {
+            if (string.IsNullOrWhiteSpace(credentialsString) && string.IsNullOrEmpty(credentialsFileName))
+            {
                 newGooglePubSubTriggerAttribute = new GooglePubSubTriggerAttribute(projectId, topicId, subscriptionId);
-            } else {
-                if (string.IsNullOrWhiteSpace(credentialsString)) {
+            }
+            else
+            {
+                if (string.IsNullOrWhiteSpace(credentialsString))
+                {
                     newGooglePubSubTriggerAttribute = new GooglePubSubTriggerAttribute(credentialsFileName, projectId, topicId, subscriptionId);
-                } else {
+                }
+                else
+                {
                     var credentials = System.Text.Encoding.UTF8.GetBytes(credentialsString);
                     newGooglePubSubTriggerAttribute = new GooglePubSubTriggerAttribute(credentials, projectId, topicId, subscriptionId);
                 }
@@ -111,11 +129,13 @@ namespace AzureFunctions.Extensions.GooglePubSub {
             var createSubscriptionIfDoesntExist = Environment.GetEnvironmentVariable($"{googlePubSubTriggerAttribute.ConfigurationNodeName}.{nameof(CreateSubscriptionIfDoesntExist)}", EnvironmentVariableTarget.Process);
             var maxBatchSize = Environment.GetEnvironmentVariable($"{googlePubSubTriggerAttribute.ConfigurationNodeName}.{nameof(MaxBatchSize)}", EnvironmentVariableTarget.Process);
 
-            if (createSubscriptionIfDoesntExist != null) {
+            if (createSubscriptionIfDoesntExist != null)
+            {
                 newGooglePubSubTriggerAttribute.CreateSubscriptionIfDoesntExist = bool.Parse(createSubscriptionIfDoesntExist);
             }
 
-            if (maxBatchSize != null && System.Text.RegularExpressions.Regex.IsMatch(maxBatchSize, "^\\d+$")) {
+            if (maxBatchSize != null && System.Text.RegularExpressions.Regex.IsMatch(maxBatchSize, "^\\d+$"))
+            {
                 newGooglePubSubTriggerAttribute.MaxBatchSize = int.Parse(maxBatchSize);
             }
 

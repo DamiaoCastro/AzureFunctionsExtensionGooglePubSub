@@ -19,7 +19,7 @@ namespace AzureFunctions.Extensions.GooglePubSub
         private readonly Microsoft.Extensions.Logging.ILogger logger;
         private readonly GooglePubSubTriggerAttribute triggerAttribute;
 
-        private const int NumberOfMessageBlocks = 10;
+        private const int NumberOfMessageBlocks = 50;
 
         public Listener(ITriggeredFunctionExecutor executor, GooglePubSubTriggerAttribute triggerAttribute, Microsoft.Extensions.Logging.ILogger logger)
         {
@@ -127,44 +127,25 @@ namespace AzureFunctions.Extensions.GooglePubSub
 
         }
 
-        private Task ExecuteMessages(Subscriptions subscriptionsClient, int index, TriggeredFunctionData messages, IEnumerable<string> ackIds, IDisposable logScope, CancellationToken cancellationToken)
+        private async Task ExecuteMessages(Subscriptions subscriptionsClient, int index, TriggeredFunctionData messages, IEnumerable<string> ackIds, IDisposable logScope, CancellationToken cancellationToken)
         {
 
             int bucketIndex = 0;
             if (messages != null && ackIds != null && ackIds.Any())
             {
-
                 logger.LogInformation($"Fetch {ackIds.Count()} items for bucket #{++bucketIndex}");
 
-                var t = executor.TryExecuteAsync(messages, cancellationToken)
-                        .ContinueWith((functionResultTask) =>
-                        {
-
-                            if (functionResultTask.IsFaulted)
-                            {
-                                logger.Log(Microsoft.Extensions.Logging.LogLevel.Error, new Microsoft.Extensions.Logging.EventId(index, "TryExecuteAsync"), logScope, functionResultTask.Exception, null);
-                            }
-                            else
-                            {
-                                FunctionResult functionResult = functionResultTask.Result;
-                                if (functionResult.Succeeded)
-                                {
-                                    return AcknowledgeAsync(subscriptionsClient, ackIds, cancellationToken);
-                                }
-                                else
-                                {
-                                    logger.Log(Microsoft.Extensions.Logging.LogLevel.Error, new Microsoft.Extensions.Logging.EventId(index, "TryExecuteAsync"), logScope, functionResult.Exception, null);
-                                }
-                            }
-
-                            return Task.CompletedTask;
-
-                        }, cancellationToken).Unwrap();
-
-                return t;
+                var functionResult = await executor.TryExecuteAsync(messages, cancellationToken);
+                if (functionResult.Succeeded)
+                {
+                    await AcknowledgeAsync(subscriptionsClient, ackIds, cancellationToken);
+                }
+                else
+                {
+                    logger.Log(Microsoft.Extensions.Logging.LogLevel.Error, new Microsoft.Extensions.Logging.EventId(index, "TryExecuteAsync"), logScope, functionResult.Exception, null);
+                }
             }
 
-            return Task.CompletedTask;
         }
 
         private Task AcknowledgeAsync(Subscriptions subscriptionsClient, IEnumerable<string> ackIds, CancellationToken cancellationToken)

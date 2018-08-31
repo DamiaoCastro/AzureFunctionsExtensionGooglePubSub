@@ -1,8 +1,8 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFramework>netstandard2.0</TargetFramework>
-    <Version>1.0.3-beta5</Version>
+    <Version>1.0.3-beta8</Version>
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
     <AssemblyVersion>1.0.3.3</AssemblyVersion>
     <FileVersion>1.0.3.3</FileVersion>
@@ -21,7 +21,7 @@ If this package was done by Microsoft itself would be under the namespace "Micro
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.Azure.WebJobs.Extensions" Version="3.0.0-beta5" />
+    <PackageReference Include="Microsoft.Azure.WebJobs.Extensions" Version="3.0.0-beta8" />
     <PackageReference Include="TransparentApiClient.Google.PubSub.V1" Version="0.0.3" />
   </ItemGroup>
 

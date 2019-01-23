@@ -3,15 +3,16 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Azure.WebJobs.Host.Bindings;
 using System.Collections.Generic;
+using TransparentApiClient.Google.PubSub.V1.Schema;
 
-namespace AzureFunctions.Extensions.GooglePubSub {
+namespace AzureFunctions.Extensions.GooglePubSub.Bindings {
     internal class ValueBinder : IValueBinder {
 
-        private object _parameter;
+        private object parameter;
         private object value;
 
-        public ValueBinder(object parameter, IEnumerable<string> triggerValue) {
-            _parameter = parameter;
+        public ValueBinder(object parameter, IEnumerable<PubsubMessage> triggerValue) {
+            this.parameter = parameter;
             this.value = triggerValue;
         }
 

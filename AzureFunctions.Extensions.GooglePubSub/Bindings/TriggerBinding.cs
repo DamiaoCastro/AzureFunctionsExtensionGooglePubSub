@@ -6,38 +6,41 @@ using Microsoft.Azure.WebJobs.Host.Listeners;
 using Microsoft.Azure.WebJobs.Host.Protocols;
 using System.Threading.Tasks;
 using System.Reflection;
+using AzureFunctions.Extensions.GooglePubSub.Services;
+using TransparentApiClient.Google.PubSub.V1.Schema;
 
-namespace AzureFunctions.Extensions.GooglePubSub {
+namespace AzureFunctions.Extensions.GooglePubSub.Bindings {
 
     internal class TriggerBinding : ITriggerBinding {
 
         private readonly GooglePubSubTriggerAttribute googlePubSubTriggerAttribute;
-        private ParameterInfo parameter;
-        private readonly Microsoft.Extensions.Logging.ILogger logger;
-        private IReadOnlyDictionary<string, Type> bindingContract;
+        private readonly ParameterInfo parameter;
+        private readonly IServiceFactory serviceFactory;
 
-        public TriggerBinding(GooglePubSubTriggerAttribute googlePubSubTriggerAttribute, ParameterInfo parameter, Microsoft.Extensions.Logging.ILogger logger) {
+        private readonly IReadOnlyDictionary<string, Type> bindingContract;
+
+        public TriggerBinding(GooglePubSubTriggerAttribute googlePubSubTriggerAttribute, ParameterInfo parameter, IServiceFactory serviceFactory) {
             this.googlePubSubTriggerAttribute = googlePubSubTriggerAttribute;
             this.parameter = parameter;
-            this.logger = logger;
+            this.serviceFactory = serviceFactory;
             bindingContract = CreateBindingDataContract();
         }
 
-        IReadOnlyDictionary<string, Type> ITriggerBinding.BindingDataContract => bindingContract;
+        Type ITriggerBinding.TriggerValueType => typeof(IEnumerable<PubsubMessage>);
 
-        Type ITriggerBinding.TriggerValueType { get { return typeof(IEnumerable<string>); } }
+        IReadOnlyDictionary<string, Type> ITriggerBinding.BindingDataContract => bindingContract;
 
         Task<ITriggerData> ITriggerBinding.BindAsync(object value, ValueBindingContext context) {
             // TODO: Perform any required conversions on the value
             // E.g. convert from Dashboard invoke string to our trigger
             // value type
-            IEnumerable<string> triggerValue = value as IEnumerable<string>;
+            IEnumerable<PubsubMessage> triggerValue = value as IEnumerable<PubsubMessage>;
             IValueBinder valueBinder = new ValueBinder(parameter, triggerValue);
             return Task.FromResult<ITriggerData>(new TriggerData(valueBinder, GetBindingData(triggerValue)));
         }
 
         Task<IListener> ITriggerBinding.CreateListenerAsync(ListenerFactoryContext context) {
-            return Task.FromResult<IListener>(new Listener(context.Executor, googlePubSubTriggerAttribute, logger));
+            return Task.FromResult<IListener>(new Listener(context.Executor, googlePubSubTriggerAttribute, serviceFactory));
         }
 
         ParameterDescriptor ITriggerBinding.ToParameterDescriptor() {
@@ -51,7 +54,7 @@ namespace AzureFunctions.Extensions.GooglePubSub {
                 }
             };
         }
-
+        
         private class GooglePubSubTriggerParameterDescriptor : TriggerParameterDescriptor {
             public override string GetTriggerReason(IDictionary<string, string> arguments) {
                 // TODO: Customize your Dashboard display string
@@ -61,16 +64,15 @@ namespace AzureFunctions.Extensions.GooglePubSub {
 
         private IReadOnlyDictionary<string, Type> CreateBindingDataContract() {
             Dictionary<string, Type> contract = new Dictionary<string, Type>(StringComparer.OrdinalIgnoreCase);
-            //contract.Add("GooglePubSubTriggerAttribute", typeof(GooglePubSubTriggerAttribute));
-
-            // TODO: Add any additional binding contract members
-
+            contract.Add(nameof(GooglePubSubTriggerAttribute), typeof(GooglePubSubTriggerAttribute));
+            contract.Add(nameof(PubsubMessage), typeof(PubsubMessage));
             return contract;
         }
 
-        private IReadOnlyDictionary<string, object> GetBindingData(IEnumerable<string> value) {
-            Dictionary<string, object> bindingData = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase);
-            bindingData.Add("GooglePubSubTrigger", value);
+        private IReadOnlyDictionary<string, object> GetBindingData(IEnumerable<PubsubMessage> value) {
+            Dictionary<string, object> bindingData = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase) {
+                { "GooglePubSubTrigger", value }
+            };
             return bindingData;
         }
 

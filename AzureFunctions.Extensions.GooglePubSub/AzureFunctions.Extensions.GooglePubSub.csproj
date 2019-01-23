@@ -2,10 +2,10 @@
 
   <PropertyGroup>
     <TargetFramework>netstandard2.0</TargetFramework>
-    <Version>3.0.0</Version>
+    <Version>3.0.1</Version>
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
-    <AssemblyVersion>3.0.0</AssemblyVersion>
-    <FileVersion>3.0.0</FileVersion>
+    <AssemblyVersion>3.0.1</AssemblyVersion>
+    <FileVersion>3.0.1</FileVersion>
     <Authors>Damiao Castro</Authors>
     <Company>fowet.com</Company>
     <Product>AzureFunctions.Extensions.GooglePubSub</Product>
@@ -21,8 +21,16 @@ If this package was done by Microsoft itself would be under the namespace "Micro
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.Azure.WebJobs.Extensions" Version="3.0.0" />
-    <PackageReference Include="TransparentApiClient.Google.PubSub.V1" Version="0.0.3" />
+    <Compile Remove="Bindings\PubsubMessageAsyncCollector.cs" />
+    <Compile Remove="Bindings\StringAsyncCollector.cs" />
+    <Compile Remove="CreatorService.cs" />
+    <Compile Remove="PublisherClientCache.cs" />
+    <Compile Remove="ValueBinder.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Azure.WebJobs.Extensions" Version="3.0.1" />
+    <PackageReference Include="TransparentApiClient.Google.PubSub.V1" Version="0.0.4" />
   </ItemGroup>
 
 </Project>

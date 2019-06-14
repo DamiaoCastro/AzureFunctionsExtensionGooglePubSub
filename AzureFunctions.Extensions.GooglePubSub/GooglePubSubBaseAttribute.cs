@@ -13,6 +13,8 @@ namespace AzureFunctions.Extensions.GooglePubSub {
 
         public string CredentialsSettingKey { get; }
 
+        public string FullNameSettingKey { get; set; }
+
         private byte[] _credentials = null;
 
         internal byte[] Credentials {

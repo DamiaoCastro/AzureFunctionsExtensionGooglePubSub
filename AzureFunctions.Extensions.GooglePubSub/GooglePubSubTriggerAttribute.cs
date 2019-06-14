@@ -1,24 +1,12 @@
 ﻿using Microsoft.Azure.WebJobs.Description;
 using System;
+using System.Linq;
 
 namespace AzureFunctions.Extensions.GooglePubSub {
 
     [Binding]
     [AttributeUsage(AttributeTargets.Parameter, AllowMultiple = false)]
     public sealed class GooglePubSubTriggerAttribute : GooglePubSubBaseAttribute {
-
-        /// <summary>
-        /// Attribute to read from Google PubSub. Works with type 'IEnumerable<string>' and 'string[]'
-        /// </summary>
-        /// <param name="credentialsSettingKey">setting key where the value is the string representation of the JSON credential files given in the google cloud service account.</param>
-        /// <param name="projectId">projectId inside google cloud</param>
-        /// <param name="topicId">PubSub topicId to read from</param>
-        /// <param name="subscriptionId">subscriptionId to use</param>
-        public GooglePubSubTriggerAttribute(string credentialsSettingKey, string projectId, string topicId, string subscriptionId) : base(credentialsSettingKey) {
-            ProjectId = projectId;
-            TopicId = topicId;
-            SubscriptionId = subscriptionId;
-        }
 
         /// <summary>
         /// using this contructor, the settings will come from the settings file.
@@ -43,6 +31,37 @@ namespace AzureFunctions.Extensions.GooglePubSub {
                 TopicId = topicId;
                 SubscriptionId = subscriptionId;
             }
+        }
+
+        public GooglePubSubTriggerAttribute(string credentialsSettingKey, string fullNameSettingKey) : base(credentialsSettingKey) {
+
+            if (!string.IsNullOrWhiteSpace(fullNameSettingKey)) {
+
+                var value = Environment.GetEnvironmentVariable(fullNameSettingKey, EnvironmentVariableTarget.Process);
+                if (!string.IsNullOrWhiteSpace(value)) {
+                    var items = value.Split(new string[] { ":", "." }, StringSplitOptions.RemoveEmptyEntries);
+                    if (items.Count() == 3) {
+                        ProjectId = items[0];
+                        TopicId = items[1];
+                        SubscriptionId = items[2];
+                    }
+                }
+            }
+
+            FullNameSettingKey = fullNameSettingKey;
+        }
+
+        /// <summary>
+        /// Attribute to read from Google PubSub. Works with type 'IEnumerable<string>' and 'string[]'
+        /// </summary>
+        /// <param name="credentialsSettingKey">setting key where the value is the string representation of the JSON credential files given in the google cloud service account.</param>
+        /// <param name="projectId">projectId inside google cloud</param>
+        /// <param name="topicId">PubSub topicId to read from</param>
+        /// <param name="subscriptionId">subscriptionId to use</param>
+        public GooglePubSubTriggerAttribute(string credentialsSettingKey, string projectId, string topicId, string subscriptionId) : base(credentialsSettingKey) {
+            ProjectId = projectId;
+            TopicId = topicId;
+            SubscriptionId = subscriptionId;
         }
 
         public string ConfigurationNodeName { get; }

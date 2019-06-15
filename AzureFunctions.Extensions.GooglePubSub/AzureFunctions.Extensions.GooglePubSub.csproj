@@ -12,6 +12,7 @@
     <Description>Extension for Google PubSub to work with Azure Functions and Azure Webjobs.
 If this package was done by Microsoft itself would be under the namespace "Microsoft.Azure.WebJobs.Extensions.GooglePubSub"</Description>
     <PackageProjectUrl>https://github.com/DamiaoCastro/AzureFunctionsExtensionGooglePubSub/wiki</PackageProjectUrl>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
   </PropertyGroup>
 
   <ItemGroup>

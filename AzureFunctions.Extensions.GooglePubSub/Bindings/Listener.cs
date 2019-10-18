@@ -26,14 +26,13 @@ namespace AzureFunctions.Extensions.GooglePubSub.Bindings {
             this.triggerAttribute = triggerAttribute;
         }
 
-        void IListener.Cancel() {
-        }
+        void IListener.Cancel() { }
 
-        public void Dispose() {
-        }
+        public void Dispose() { }
 
         async Task IListener.StartAsync(CancellationToken cancellationToken) {
 
+            //
             await Task.Yield();
 
             Parallel.For(0, 1, async (int i) => {
@@ -57,14 +56,24 @@ namespace AzureFunctions.Extensions.GooglePubSub.Bindings {
                 ISubscriptions subscriptionsClient = serviceFactory.GetService<ISubscriptions>(triggerAttribute);
 
                 while (!cancellationToken.IsCancellationRequested) {
-                    await ListenerPull(subscriptionsClient, cancellationToken).ConfigureAwait(false);
-                    await Task.Delay(200);
+                    var t =
+                        ListenerPull(subscriptionsClient, cancellationToken)
+                            .ContinueWith((Task<bool> returnTask) => {
+
+                                if (returnTask.Result) {
+                                    return Task.CompletedTask;
+                                } else {
+                                    return Task.Delay(1000);
+                                }
+                            }, cancellationToken);
+
+                    await t.Unwrap().ConfigureAwait(false);
                 }
 
             } catch (Exception) { }
 
             if (!cancellationToken.IsCancellationRequested) {
-                System.Threading.Thread.Sleep(30 * 1000);
+                Thread.Sleep(10 * 1000);
                 goto retry;
             }
 
@@ -89,7 +98,7 @@ namespace AzureFunctions.Extensions.GooglePubSub.Bindings {
 
         }
 
-        private async Task ListenerPull(ISubscriptions subscriptionsClient, CancellationToken cancellationToken) {
+        private async Task<bool> ListenerPull(ISubscriptions subscriptionsClient, CancellationToken cancellationToken) {
 
             var typeInput = await GetTypeInput(subscriptionsClient, cancellationToken).ConfigureAwait(false);
 
@@ -98,13 +107,17 @@ namespace AzureFunctions.Extensions.GooglePubSub.Bindings {
                 var tasks = from c in typeInput
                             let messages = c.messages
                             let ackIds = c.ackIds
-                            select ExecuteMessages(subscriptionsClient, messages, ackIds, cancellationToken);
+                            select ExecuteMessagesAsyn(subscriptionsClient, messages, ackIds, cancellationToken);
 
                 await Task.WhenAll(tasks).ConfigureAwait(false);
+
+                return true;
             }
+
+            return false;
         }
 
-        private async Task ExecuteMessages(ISubscriptions subscriptionsClient, TriggeredFunctionData messages, IEnumerable<string> ackIds, CancellationToken cancellationToken) {
+        private async Task ExecuteMessagesAsyn(ISubscriptions subscriptionsClient, TriggeredFunctionData messages, IEnumerable<string> ackIds, CancellationToken cancellationToken) {
 
             if (messages != null && ackIds != null && ackIds.Any()) {
                 var functionResult = await executor.TryExecuteAsync(messages, cancellationToken).ConfigureAwait(false);
@@ -136,11 +149,11 @@ namespace AzureFunctions.Extensions.GooglePubSub.Bindings {
                     },
                     null,
                     cancellationToken)
-                .ContinueWith(getMessages);
+                .ContinueWith(GetMessages);
 
         }
 
-        private IEnumerable<(TriggeredFunctionData messages, IEnumerable<string> ackIds)> getMessages(Task<BaseResponse<PullResponse>> pullTask) {
+        private IEnumerable<(TriggeredFunctionData messages, IEnumerable<string> ackIds)> GetMessages(Task<BaseResponse<PullResponse>> pullTask) {
 
             var pull = pullTask.Result;
 
